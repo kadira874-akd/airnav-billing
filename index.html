@@ -5,67 +5,47 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>AirNav Advance & Extend System</title>
 <script>
-  // GANTI URL DI BAWAH INI DENGAN URL WEB APP APPS SCRIPT ANDA (akhiran /exec)
-  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxXKewOi6pg4V09TzOaMmUPgsYCHBJ8HZYdTe9jPXKG3xh4TNcEpVv6krwGngUKbbYLaQ/exec';
+  // === GITHUB PAGES API BRIDGE ===
+  // GANTI URL DI BAWAH INI DENGAN URL WEB APP ANDA (akhiran /exec)
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx.../exec';
 
-  (function () {
-    // Jika berjalan di dalam editor Apps Script, jangan timpa
-    const insideGAS = !!(window.google && window.google.script && window.google.script.run);
-    if (insideGAS || !GAS_API_URL || GAS_API_URL.includes('XXXXXXXX')) return;
-
-    function createRunner() {
-      let successHandler = function () {};
-      let failureHandler = function () {};
-
-      const runner = {
-        withSuccessHandler: function (cb) {
-          successHandler = cb;
-          return proxy; // ✅ PERBAIKAN: Kembalikan proxy, bukan runner
-        },
-        withFailureHandler: function (cb) {
-          failureHandler = cb;
-          return proxy; // ✅ PERBAIKAN: Kembalikan proxy, bukan runner
-        }
-      };
-
-      const proxy = new Proxy(runner, {
-        get: function (target, prop) {
-          if (prop in target) return target[prop];
-
-          return function () {
-            const args = Array.prototype.slice.call(arguments);
-
-            fetch(GAS_API_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ fn: prop, args: args }),
-              redirect: 'follow' // ✅ Penting untuk menangani redirect Google Apps Script
-            })
-              .then(function (res) {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                return res.json();
-              })
-              .then(function (data) {
-                successHandler(data);
-              })
-              .catch(function (err) {
-                console.error('[GAS Bridge Error]', err);
-                failureHandler(err);
-              });
-          };
-        }
-      });
-
-      return proxy;
-    }
+  if (GAS_API_URL && !GAS_API_URL.includes('XXXX')) {
+    const _runner = {
+      _success: function(){},
+      _failure: function(){},
+      withSuccessHandler: function(cb) { this._success = cb; return this; },
+      withFailureHandler: function(cb) { this._failure = cb; return this; }
+    };
 
     window.google = window.google || {};
     window.google.script = window.google.script || {};
-
-    Object.defineProperty(window.google.script, 'run', {
-      get: createRunner
+    
+    window.google.script.run = new Proxy(_runner, {
+      get: function(target, prop) {
+        if (prop in target) return target[prop];
+        return function() {
+          const args = Array.from(arguments);
+          fetch(GAS_API_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain;charset=utf-8'},
+            body: JSON.stringify({fn: prop, args: args}),
+            redirect: 'follow'
+          })
+          .then(r => r.text())
+          .then(text => {
+            try {
+              const json = JSON.parse(text);
+              if (json && json.error) target._failure(json);
+              else target._success(json);
+            } catch(e) {
+              target._failure(new Error('Server non-JSON: ' + text.substring(0,50)));
+            }
+          })
+          .catch(err => target._failure(err));
+        };
+      }
     });
-  })();
+  }
 </script>
 <!-- FAVICON -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='%230D2451'/><stop offset='100%' stop-color='%231A3F8F'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><rect x='35' y='15' width='30' height='20' rx='3' fill='white' opacity='.9'/><rect x='25' y='35' width='50' height='50' rx='4' fill='white' opacity='.95'/><rect x='30' y='45' width='15' height='15' rx='2' fill='%232555B4'/><rect x='55' y='45' width='15' height='15' rx='2' fill='%232555B4'/><rect x='30' y='65' width='15' height='15' rx='2' fill='%232555B4'/><rect x='55' y='65' width='15' height='15' rx='2' fill='%232555B4'/><circle cx='50' cy='25' r='4' fill='%23E8213F'/></svg>">
