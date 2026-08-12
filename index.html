@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>AirNav Advance & Extend System</title>
 <script>
-  // GANTI DENGAN URL WEB APP APPS SCRIPT ANDA
+  // GANTI URL DI BAWAH INI DENGAN URL WEB APP APPS SCRIPT ANDA (akhiran /exec)
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxXKewOi6pg4V09TzOaMmUPgsYCHBJ8HZYdTe9jPXKG3xh4TNcEpVv6krwGngUKbbYLaQ/exec';
 
   (function () {
+    // Jika berjalan di dalam editor Apps Script, jangan timpa
     const insideGAS = !!(window.google && window.google.script && window.google.script.run);
-
-    if (insideGAS || !GAS_API_URL) return;
+    if (insideGAS || !GAS_API_URL || GAS_API_URL.includes('XXXXXXXX')) return;
 
     function createRunner() {
       let successHandler = function () {};
@@ -20,15 +20,15 @@
       const runner = {
         withSuccessHandler: function (cb) {
           successHandler = cb;
-          return runner;
+          return proxy; // ✅ PERBAIKAN: Kembalikan proxy, bukan runner
         },
         withFailureHandler: function (cb) {
           failureHandler = cb;
-          return runner;
+          return proxy; // ✅ PERBAIKAN: Kembalikan proxy, bukan runner
         }
       };
 
-      return new Proxy(runner, {
+      const proxy = new Proxy(runner, {
         get: function (target, prop) {
           if (prop in target) return target[prop];
 
@@ -37,13 +37,9 @@
 
             fetch(GAS_API_URL, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'text/plain;charset=utf-8'
-              },
-              body: JSON.stringify({
-                fn: prop,
-                args: args
-              })
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ fn: prop, args: args }),
+              redirect: 'follow' // ✅ Penting untuk menangani redirect Google Apps Script
             })
               .then(function (res) {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -53,11 +49,14 @@
                 successHandler(data);
               })
               .catch(function (err) {
+                console.error('[GAS Bridge Error]', err);
                 failureHandler(err);
               });
           };
         }
       });
+
+      return proxy;
     }
 
     window.google = window.google || {};
