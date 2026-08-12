@@ -12133,21 +12133,22 @@ function stopIdleTimer() {
 
 // ==================== AUDIO ENGINE ====================
 const AUDIO = (() => {
-  const ctx = (() => {
-    try { return new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
-  })();
-
-  function unlock() {
-    if (!ctx || ctx.state !== 'suspended') return;
-    ctx.resume().catch(() => {});
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) {
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
   }
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
+  }
+  function unlock() { getCtx(); }
   document.addEventListener('click',    unlock, { once: true, passive: true });
   document.addEventListener('keydown',  unlock, { once: true, passive: true });
   document.addEventListener('touchstart', unlock, { once: true, passive: true });
 
   // Buat oscillator dengan envelope
   function tone(freq, type, duration, vol, delay = 0) {
-    if (!ctx) return;
+    const ctx = getCtx(); if (!ctx) return;
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -12164,7 +12165,7 @@ const AUDIO = (() => {
   return {
     // Notifikasi baru masuk — lembut & elegan
     chime() {
-      if (!ctx) return;
+      const ctx = getCtx(); if (!ctx) return;
       if (ctx.state === 'suspended') { ctx.resume(); return; }
       tone(880, 'sine', 0.35, 0.18);
       tone(1108, 'sine', 0.30, 0.14, 0.12);
@@ -12172,7 +12173,7 @@ const AUDIO = (() => {
     },
     // Berhasil (validasi / lunas)
     success() {
-      if (!ctx) return;
+      const ctx = getCtx(); if (!ctx) return;
       if (ctx.state === 'suspended') { ctx.resume(); return; }
       tone(523, 'sine', 0.18, 0.15);
       tone(659, 'sine', 0.18, 0.15, 0.14);
@@ -12181,7 +12182,7 @@ const AUDIO = (() => {
     },
     // Peringatan / hapus
     warning() {
-      if (!ctx) return;
+      const ctx = getCtx(); if (!ctx) return;
       if (ctx.state === 'suspended') { ctx.resume(); return; }
       tone(440, 'triangle', 0.22, 0.20);
       tone(370, 'triangle', 0.22, 0.20, 0.20);
@@ -12189,14 +12190,14 @@ const AUDIO = (() => {
     },
     // Aksi lokal (tambah data, simpan)
     soft() {
-      if (!ctx) return;
+      const ctx = getCtx(); if (!ctx) return;
       if (ctx.state === 'suspended') { ctx.resume(); return; }
       tone(660, 'sine', 0.20, 0.10);
       tone(880, 'sine', 0.20, 0.08, 0.14);
     },
     // Error
     error() {
-      if (!ctx) return;
+      const ctx = getCtx(); if (!ctx) return;
       if (ctx.state === 'suspended') { ctx.resume(); return; }
       tone(300, 'sawtooth', 0.15, 0.20);
       tone(250, 'sawtooth', 0.25, 0.20, 0.18);
