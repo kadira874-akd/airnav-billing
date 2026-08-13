@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>AirNav Advance & Extend System</title>
 <!-- FAVICON -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='%230D2451'/><stop offset='100%' stop-color='%231A3F8F'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><rect x='35' y='15' width='30' height='20' rx='3' fill='white' opacity='.9'/><rect x='25' y='35' width='50' height='50' rx='4' fill='white' opacity='.95'/><rect x='30' y='45' width='15' height='15' rx='2' fill='%232555B4'/><rect x='55' y='45' width='15' height='15' rx='2' fill='%232555B4'/><rect x='30' y='65' width='15' height='15' rx='2' fill='%232555B4'/><rect x='55' y='65' width='15' height='15' rx='2' fill='%232555B4'/><circle cx='50' cy='25' r='4' fill='%23E8213F'/></svg>">
@@ -302,22 +302,47 @@ ACCESSIBILITY (A11Y)
   }
 }
 
-/* Reduced Motion — matikan animasi DEKORATIF, tapi pertahankan indikator loading
-   fungsional. Spinner adalah satu-satunya sinyal bahwa sistem sedang memproses;
-   mematikannya total membuat aplikasi TERLIHAT hang, bukan "sedang bekerja". */
 @media (prefers-reduced-motion: reduce) {
-  *:not(.ring-spinner):not(.dot-spinner):not(#opProgressBarFill),
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .ring-spinner, .dot-spinner, .pdf-spin, .ab.is-loading i {
-    animation-duration: 1.1s !important; /* diperlambat, tetap berputar */
+  /* Animasi FUNGSIONAL (indikator proses/loading) tetap harus berjalan.
+     iOS Safari melaporkan prefers-reduced-motion:reduce OTOMATIS saat
+     Low Power Mode aktif — bukan hanya saat Accessibility>Reduce Motion
+     diaktifkan manual. Karena itu SEMUA indikator loading & empty-state
+     wajib dikecualikan, bukan cuma spinner. */
+  .ring-spinner, .dot-spinner, .pdf-spin, .ab.is-loading i, .fa-spin,
+  .nav-badge {
+    animation-duration: 1.1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .skeleton, .skeleton-row .sk-block {
+    animation-duration: 1.4s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .empty-icon-enhanced {
+    animation-duration: 3s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .empty-icon-enhanced::before {
+    animation-duration: 20s !important;
+    animation-iteration-count: infinite !important;
+  }
+  /* Entrance baris tabel = sinyal "tab sudah berganti" — jangan dimatikan total */
+  table.dt tbody tr {
+    animation-duration: .3s !important;
+    animation-iteration-count: 1 !important;
   }
 }
-
+/* ── Animasi "satu baris baru" — baris baru menyala lembut lalu normal ── */
+@keyframes rowFlash {
+  0%   { background-color: rgba(59,130,246,.22); }
+  60%  { background-color: rgba(59,130,246,.10); }
+  100% { background-color: transparent; }
+}
+tr.row-flash > td { animation: rowFlash 2.4s ease-out; }
 /* Screen Reader Only */
 .sr-only {
   position: absolute;
@@ -595,6 +620,8 @@ background:linear-gradient(90deg,rgba(255,255,255,0.12),transparent);
   text-decoration:none;transition:all var(--t-fast);
   color:var(--sidebar-text-muted);
   border:1px solid transparent;
+  min-height:56px;
+  box-sizing:border-box;
 }
 .nav-item:hover{
   background:var(--sidebar-hover);
@@ -1275,30 +1302,17 @@ table.dt tbody td.td-mono {
 /* ============================================================
 ENHANCED TABLE ANIMATIONS
 ============================================================ */
-table.dt tbody tr {
-  animation: fadeInUp 0.3s ease backwards;
+/* ✅ Entrance animation kini OPSIONAL via class .row-enter — hanya
+   dipasang saat tabel benar-benar dimuat pertama kali (ganti tab/unit,
+   fetch dari server). Aksi lokal (tambah/edit/hapus/validasi satu baris)
+   TIDAK memicu animasi ini lagi — hanya baris yang berubah yang menyala
+   lewat .row-flash, baris lain tampil instan tanpa efek "reload total". */
+table.dt tbody tr.row-enter {
+  animation: fadeInRow 0.22s ease backwards;
 }
-
-table.dt tbody tr:nth-child(1) { animation-delay: 0.02s; }
-table.dt tbody tr:nth-child(2) { animation-delay: 0.04s; }
-table.dt tbody tr:nth-child(3) { animation-delay: 0.06s; }
-table.dt tbody tr:nth-child(4) { animation-delay: 0.08s; }
-table.dt tbody tr:nth-child(5) { animation-delay: 0.10s; }
-table.dt tbody tr:nth-child(6) { animation-delay: 0.12s; }
-table.dt tbody tr:nth-child(7) { animation-delay: 0.14s; }
-table.dt tbody tr:nth-child(8) { animation-delay: 0.16s; }
-table.dt tbody tr:nth-child(9) { animation-delay: 0.18s; }
-table.dt tbody tr:nth-child(10) { animation-delay: 0.20s; }
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes fadeInRow {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Button ripple effect */
@@ -1467,27 +1481,6 @@ table.dt tbody tr:nth-child(10) { animation-delay: 0.20s; }
 ============================================================ */
 #loader{display:none;}
 
-/* Progress Bar — top of screen */
-#opProgressBar{
-  position:fixed;top:0;left:0;right:0;
-  height:2px;z-index:99999;
-  background:transparent;
-  pointer-events:none;
-  transition:opacity .3s ease;
-}
-#opProgressBar.active{background:rgba(255,255,255,.1);}
-#opProgressBarFill{
-  height:100%;
-  width:100%;                 /* ganti dari width:0% */
-  transform:scaleX(0);        /* state awal */
-  transform-origin:left center;
-  background:linear-gradient(90deg,var(--brand-500),var(--cyan-400),var(--emerald-400));
-  border-radius:0 2px 2px 0;
-  transition:transform .4s cubic-bezier(.4,0,.2,1);  /* ganti dari transition:width */
-  box-shadow:0 0 8px rgba(59,130,246,.6);
-  will-change:transform;
-}
-
 /* Operation Card — bottom right */
 #opCard{
   position:fixed;
@@ -1637,22 +1630,6 @@ table.dt tbody tr:nth-child(10) { animation-delay: 0.20s; }
   50% { box-shadow: 0 0 10px rgba(59,130,246,.8), 0 0 0 3px rgba(59,130,246,.15); }
 }
 
-/* ── Progress bar: shimmer effect saat loading ── */
-#opProgressBarFill {
-  position: relative;
-  overflow: hidden;
-}
-#opProgressBarFill::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%);
-  transform: translateX(-100%);
-  animation: progress-shimmer 1.5s infinite;
-}
-@keyframes progress-shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
 /* ── Toast container: spacing dari mobile dock ── */
 @media (max-width: 768px) {
   .toast-container {
@@ -1854,8 +1831,29 @@ table.dt tbody tr:nth-child(10) { animation-delay: 0.20s; }
 text-transform: none !important;
 }
 .form-select option{background:var(--bg-modal);color:var(--text-primary);}
-.form-input[type="date"],.form-input[type="time"]{color-scheme:dark;}
+.form-input[type="date"],.form-input[type="time"]{
+  color-scheme:dark;
+  min-height:44px;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  box-sizing:border-box;
+}
 [data-theme="light"] .form-input[type="date"],[data-theme="light"] .form-input[type="time"]{color-scheme:light;}
+/* Normalisasi ukuran internal segmen jam/tanggal — WebKit/Android tidak
+   otomatis mewarisi padding & font-size dari .form-input untuk area ini */
+.form-input[type="time"]::-webkit-datetime-edit,
+.form-input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
+  font-size: var(--text-base);
+}
+.form-input[type="time"]::-webkit-calendar-picker-indicator,
+.form-input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: .75;
+  filter: invert(.5);
+  cursor: pointer;
+  padding: 2px;
+}
 .form-textarea{resize:vertical;min-height:80px;}
 .form-checkbox{display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.65rem 0;}
 .form-checkbox input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand-600);cursor:pointer;}
@@ -2122,7 +2120,7 @@ background:linear-gradient(135deg,rgba(37,99,235,.85),rgba(8,145,178,.85));
 /* ============================================================
    SKELETON
 ============================================================ */
-.skeleton{background:linear-gradient(90deg,var(--bg-card) 25%,var(--bg-card-hover) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r-md);}
+.skeleton{background:linear-gradient(90deg,var(--bg-card) 25%,var(--bg-card-hover) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.1s infinite;border-radius:var(--r-md);}
 @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 /* ── Skeleton baris tabel — dipakai di modal Master Data & preview saat memuat ── */
 .skeleton-row {
@@ -2516,34 +2514,6 @@ background:linear-gradient(135deg,rgba(37,99,235,.85),rgba(8,145,178,.85));
   border-radius: 50%;
   animation: pdf-spin .6s linear infinite;
   flex-shrink: 0;
-}
-
-/* Progress bar tipis di bawah topbar saat ada PDF berjalan */
-#pdfGlobalBar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  z-index: 99999;
-  pointer-events: none;
-  background: linear-gradient(90deg,
-    var(--brand-500), var(--cyan-400), var(--emerald-400));
-  transform-origin: left;
-  transform: scaleX(0);
-  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .3s ease;
-  opacity: 0;
-  overflow: hidden;
-}
-#pdfGlobalBar.active {
-  opacity: 1;
-  transform: scaleX(var(--bar-progress, 0));
-}
-#pdfGlobalBar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg,
-    transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%);
-  animation: pdf-progress-shimmer 1.2s infinite;
 }
 
 /* ============================================================
@@ -3311,9 +3281,8 @@ animation:none !important;
 will-change:transform;
 }
 
-/* 4) Percepat & sederhanakan animasi stagger baris tabel saat loading */
-table.dt tbody tr{ will-change:transform,opacity; }
-table.dt tbody tr:nth-child(n+9){ animation-duration:.18s; animation-delay:0s; }
+/* 4) Baris tabel — will-change hanya aktif saat entrance benar-benar dipakai */
+table.dt tbody tr.row-enter{ will-change:opacity; animation-duration:.18s; }
 }
 
 /* ============================================================
@@ -3369,11 +3338,8 @@ transform: translateX(-50%) translateY(0);
 
 <!-- LOADER — digantikan oleh unified op system -->
 <div id="loader" style="display:none"></div>
-<!-- PDF Global Progress Bar -->
-<div id="pdfGlobalBar"></div>
 
 <!-- UNIFIED OPERATION PROGRESS -->
-<div id="opProgressBar"><div id="opProgressBarFill"></div></div>
 <div id="opCard">
   <div id="opIconRing">
     <div class="ring-spinner"></div>
@@ -3933,14 +3899,6 @@ const OP = (() => {
   let _steps = [];
   let _current = 0;
 
-  function _bar(pct) {
-    const fill = document.getElementById('opProgressBarFill');
-    const bar  = document.getElementById('opProgressBar');
-    if (!fill || !bar) return;
-    bar.classList.add('active');
-    fill.style.transform = `scaleX(${Math.min(pct,100) / 100})`; // ganti dari fill.style.width
-  }
-
   function _renderSteps() {
     const el = document.getElementById('opSteps');
     if (!el || !_steps.length) return;
@@ -3992,23 +3950,17 @@ const OP = (() => {
       if (descEl)  descEl.textContent  = steps[0] || 'Memulai...';
 
       _renderSteps();
-      _bar(8);
       card.classList.add('show');
     },
 
     step(desc) {
       _current = Math.min(_current + 1, _steps.length - 1);
-      const pct = _steps.length > 1
-        ? 10 + (_current / (_steps.length - 1)) * 75
-        : 50;
-      _bar(pct);
       const el = document.getElementById('opDesc');
       if (el) el.textContent = desc || _steps[_current] || '';
       _renderSteps();
     },
 
     done(msg) {
-      _bar(100);
       _setState('success');
       _setIcon('fa-check', 'var(--emerald-400)');
 
@@ -4032,7 +3984,6 @@ const OP = (() => {
     },
 
     fail(msg) {
-      _bar(100);
       _setState('error');
       _setIcon('fa-times', 'var(--rose-400)');
 
@@ -4054,13 +4005,7 @@ const OP = (() => {
 
     hide() {
       const card = document.getElementById('opCard');
-      const bar  = document.getElementById('opProgressBar');
-      const fill = document.getElementById('opProgressBarFill');
       if (card) card.classList.remove('show');
-      setTimeout(() => {
-        if (bar)  bar.classList.remove('active');
-        if (fill) fill.style.width = '0%';
-      }, 350);
     }
   };
 })();
@@ -4078,19 +4023,6 @@ const PDF = (() => {
   const _pending = new Map();
   const MAX_RETRY   = 2;
   const RETRY_DELAY = 2000;
-
-  // ── Progress bar global (thin line di top) ──
-  function _bar(pct) {
-    const el = document.getElementById('pdfGlobalBar');
-    if (!el) return;
-    if (pct === null) {
-      el.classList.remove('active');
-      el.style.setProperty('--bar-progress', '0');
-      return;
-    }
-    el.classList.add('active');
-    el.style.setProperty('--bar-progress', (pct / 100).toFixed(2));
-  }
 
   // ── Status chip di baris tabel ──
   function _chip(rowId, state, text) {
@@ -4121,7 +4053,6 @@ const PDF = (() => {
     const { rowId, type, resolve, attempt } = job;
     const key = `${rowId}:${type}`;
 
-    _bar(5);
     _chip(rowId, 'rendering', attempt > 0
       ? `Mencoba ulang (${attempt}/${MAX_RETRY})...`
       : 'Membuat PDF...');
@@ -4129,15 +4060,14 @@ const PDF = (() => {
     let result;
     try {
       result = await _doGenerate(rowId, type, (event) => {
-        if (event === 'rendering') { _bar(20); _chip(rowId, 'rendering', 'Merender...'); }
-        else if (event === 'uploading') { _bar(65); _chip(rowId, 'uploading', 'Mengupload...'); }
+        if (event === 'rendering') { _chip(rowId, 'rendering', 'Merender...'); }
+        else if (event === 'uploading') { _chip(rowId, 'uploading', 'Mengupload...'); }
       });
     } catch (err) {
       result = { success: false, error: String(err) };
     }
 
     if (result?.success) {
-      _bar(100);
       _chip(rowId, 'done', 'PDF siap');
       _pending.delete(key);
       resolve(result);
@@ -4147,14 +4077,18 @@ const PDF = (() => {
         _processNext();
       }, RETRY_DELAY);
     } else {
-      _bar(100);
       _chip(rowId, 'failed', 'Gagal — buka Preview untuk coba lagi');
       _pending.delete(key);
       resolve({ success: false, error: result?.error || 'Gagal setelah beberapa percobaan' });
     }
 
-    setTimeout(() => _bar(null), 800);
     _running = false;
+    // ✅ Job selesai (sukses/gagal) → refres tabel agar tombol view muncul kembali
+    try {
+    if (typeof renderTable === 'function' && document.getElementById('subContent')) {
+    renderTable();
+    }
+    } catch (e) { /* non-fatal */ }
     // Proses job berikutnya jika ada
     if (_queue.length > 0) _processNext();
   }
@@ -4253,8 +4187,8 @@ const PDF = (() => {
       'background:#ffffff',
     ].join(';');
 
-    // sandbox: allow-same-origin diperlukan agar html2canvas bisa akses iframe DOM
     iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+    iframe.setAttribute('referrerpolicy', 'no-referrer');
 
     wrap.appendChild(iframe);
     document.body.appendChild(wrap);
@@ -4457,10 +4391,11 @@ const PDF = (() => {
     // ── Upload ke Drive ──
     const uid      = sessionStorage.getItem('airnav_user') || 'system';
     const prefix   = isInv ? 'Invoice_' : 'Kwitansi_';
-    const filename = prefix
-      + (rec.invoiceNo || 'DOC').replace(/[^a-zA-Z0-9_\-]/g, '_')
-      + '_r' + rowId   // tambah rowId agar nama unik per record
-      + '.pdf';
+
+    // ✅ Format profesional: Hapus suffix _r{rowId} dan pertahankan tanda titik (.)
+    // Contoh hasil: Invoice_WAWW.21.2026.08.0029.pdf
+    const cleanNo  = (rec.invoiceNo || 'DOC').replace(/[^a-zA-Z0-9_\-.]/g, '_');
+    const filename = prefix + cleanNo + '.pdf';
 
     const up = await _gsRun(
       'uploadInvoiceToDrive',
@@ -4548,7 +4483,6 @@ const PDF = (() => {
       _queue   = [];
       _running = false;
       _pending.clear();
-      _bar(null);
       // Bersihkan elemen render yang mungkin tertinggal
       document.getElementById('_pdfRenderWrap')?.remove();
     }
@@ -4601,6 +4535,31 @@ function authToken() {
 // ==================== HELPERS ====================
 const $ = id => document.getElementById(id);
 // (toggleLoader sengaja tidak dideklarasikan ulang di sini — lihat definisi tunggal di atas)
+
+// ==================== IOS-SAFE BODY SCROLL LOCK ====================
+// overflow:hidden pada <body> TIDAK menahan scroll background di iOS Safari.
+// Kunci scroll dengan position:fixed + simpan/kembalikan posisi scroll asli.
+let _scrollLockY = 0;
+function lockBodyScroll() {
+  if (document.body.classList.contains('scroll-locked')) return;
+  _scrollLockY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.position = 'fixed';
+  document.body.style.top   = `-${_scrollLockY}px`;
+  document.body.style.left  = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.classList.add('scroll-locked');
+}
+function unlockBodyScroll() {
+  if (!document.body.classList.contains('scroll-locked')) return;
+  document.body.classList.remove('scroll-locked');
+  document.body.style.position = '';
+  document.body.style.top      = '';
+  document.body.style.left     = '';
+  document.body.style.right    = '';
+  document.body.style.width    = '';
+  window.scrollTo(0, _scrollLockY);
+}
 
 // ── Validasi inline korporat: sorot field bermasalah + auto-scroll + auto-fokus ──
 function markFieldError(inputId, message) {
@@ -4694,6 +4653,38 @@ function attachSwipeUpDismiss(el, onDismiss) {
   el.addEventListener('touchend', end);
   el.addEventListener('touchcancel', end);
 }
+
+// ✅ Pinch-to-zoom TERBATAS pada elemen target (kertas PDF), bukan seluruh
+// modal — viewport global sudah dikunci (user-scalable=no) agar native
+// pinch di luar area ini tidak lagi membesarkan seluruh modal.
+function attachPinchZoom(wrapperEl, targetEl) {
+  if (!wrapperEl || !targetEl) return;
+  let startDist = 0, startScale = 1, curScale = 1, lastTap = 0;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+  wrapperEl.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) { startDist = dist(e.touches); startScale = curScale; }
+  }, { passive: true });
+
+  wrapperEl.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && startDist > 0) {
+      e.preventDefault();
+      curScale = Math.min(3.5, Math.max(1, startScale * (dist(e.touches) / startDist)));
+      targetEl.style.transform = `scale(${curScale})`;
+    }
+  }, { passive: false });
+
+  wrapperEl.addEventListener('touchend', e => {
+    if (e.touches.length < 2) {
+      startDist = 0;
+      if (curScale < 1.05) { curScale = 1; targetEl.style.transform = 'scale(1)'; }
+      const now = Date.now();
+      if (now - lastTap < 300 && e.touches.length === 0) { curScale = 1; targetEl.style.transform = 'scale(1)'; }
+      lastTap = now;
+    }
+  }, { passive: true });
+}
+
 function fmtIDR(n) {
   if (n===''||n===null||n===undefined||isNaN(n)) return '—';
   return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
@@ -4901,10 +4892,14 @@ function showConfirm({icon='warn',title,desc,okLabel='Ya, Lanjutkan',okClass='',
   APP.confirmCb=callback;
   $('confirmModal').classList.add('open');
   document.body.classList.add('modal-open');
+  lockBodyScroll();
 }
 function closeConfirm(){
   $('confirmModal').classList.remove('open');APP.confirmCb=null;
-  if (!document.querySelector('.modal-overlay.open')) document.body.classList.remove('modal-open');
+  if (!document.querySelector('.modal-overlay.open')) {
+    document.body.classList.remove('modal-open');
+    unlockBodyScroll();
+  }
 }
 function doConfirm(){const cb=APP.confirmCb;closeConfirm();if(cb)cb();}
 
@@ -4914,6 +4909,7 @@ function openModal(html,size=''){
   $('mainContent').innerHTML=html;
   $('mainModal').classList.add('open');
   document.body.classList.add('modal-open');
+  lockBodyScroll();
   
   // A11y: Focus management
   box.setAttribute('role', 'dialog');
@@ -4928,8 +4924,11 @@ function openModal(html,size=''){
   const lastFocusable = focusableElements[focusableElements.length - 1];
   
   // Focus ke elemen pertama setelah 100ms (tunggu render)
+  // ✅ Hindari Chrome intervention warning: fokus otomatis lintas-origin
+  // hanya diizinkan setelah user benar-benar berinteraksi dengan iframe ini.
   setTimeout(() => {
-    if (firstFocusable) firstFocusable.focus();
+    const canAutofocus = !navigator.userActivation || navigator.userActivation.isActive;
+    if (firstFocusable && canAutofocus) firstFocusable.focus();
   }, 100);
   
   // Keyboard trap
@@ -4964,7 +4963,10 @@ function closeModal(){
     // Fokus kembali ke tombol yang membuka modal
     setTimeout(() => lastTrigger.focus(), 100);
   }
-  if (!document.querySelector('.modal-overlay.open')) document.body.classList.remove('modal-open');
+  if (!document.querySelector('.modal-overlay.open')) {
+    document.body.classList.remove('modal-open');
+    unlockBodyScroll();
+  }
 }
 
 function buildSidebar() {
@@ -6142,8 +6144,7 @@ Math.round(totalRev/Math.max(totalNom,1)*100)
     }
 
     $('pageTitle').innerHTML =
-    `<span class="pt-main"><span class="pt-long">APLIKASI PELAPORAN DATA · </span>ADVANCE &amp; EXTEND FLIGHT</span>
-    <span class="pt-sub"><i class="fas fa-location-dot"></i><span>${myUnit} · ${UNITS[myUnit] || ''}</span></span>`;
+    `<span class="pt-main"><span class="nav-unit-dot dot-${myUnit}" style="width:8px;height:8px;margin-right:.55rem"></span>${myUnit} · ${UNITS[myUnit] || ''}</span>`;
 
   $('contentArea').innerHTML = `
 
@@ -6589,6 +6590,8 @@ Math.round(totalRev/Math.max(totalNom,1)*100)
 function _renderNATable() {
   const c = document.getElementById('naTableContent');
   if (!c) return;
+  const naRowAnimClass = APP._skipRowAnim ? '' : 'row-enter';
+  APP._skipRowAnim = false;
 
   const myUnit   = getUserUnit();
   const selYear  = APP.naSelectedYear || new Date().getFullYear();
@@ -6598,10 +6601,7 @@ function _renderNATable() {
     const flightYear = parseInt(String(r.flightDate || '').substring(0, 4));
     return flightYear === selYear;
   });
-
-  const filtered = active
-    .filter(r => r.statusFlow === 'VALIDATION' || r.statusFlow === 'INVOICED')
-    .sort((a, b) => (b.rowId || 0) - (a.rowId || 0));
+  const filtered = active.filter(r => r.statusFlow === 'VALIDATION'|| r.statusFlow === 'INVOICED').sort((a, b) => (a.rowId|| 0) - (b.rowId|| 0));   // ✅ data baru = baris teratas
 
   if (filtered.length === 0) {
     c.innerHTML = `
@@ -6660,7 +6660,7 @@ function _renderNATable() {
             const deleteBtn = isValidated
               ? `<button class="ab" disabled style="background:var(--border-subtle);color:var(--text-tertiary);cursor:not-allowed;opacity:.4"><i class="fas fa-trash"></i></button>`
               : `<button class="ab ab-del na-del-btn" data-rowid="${r.rowId}"><i class="fas fa-trash"></i></button>`;
-            return `<tr style="${isValidated ? 'opacity:.72' : ''}">
+            return `<tr data-rowid="${r.rowId}" class="${naRowAnimClass}" style="${isValidated ? 'opacity:.72' : ''}">
               <td style="text-align:center;color:var(--text-tertiary)">${i + 1}</td>
               <td>${fmtDate(r.flightDate)}</td>
               <td class="td-bold td-mono">${escapeHtml(r.acid) || '—'}</td>
@@ -6862,8 +6862,7 @@ function showUnit(code, preserveTab = false) {
   setMobileActive('unit');
   updateMobileNavActive('unit');
   $('pageTitle').innerHTML =
-  `<span class="pt-main"><span class="pt-long">APLIKASI PELAPORAN DATA · </span>ADVANCE &amp; EXTEND FLIGHT</span>
-  <span class="pt-sub"><i class="fas fa-location-dot"></i><span>${code} · ${UNITS[code] || ''}</span></span>`;
+  `<span class="pt-main"><span class="nav-unit-dot dot-${code}" style="width:8px;height:8px;margin-right:.55rem"></span>${code} · ${UNITS[code] || ''}</span>`;
 
   renderUnitLayout();
   requestAnimationFrame(() => setTimeout(() => fetchUnitData(false), 50));
@@ -7078,10 +7077,87 @@ function fetchUnitData(force = false) {
   });
 }
 
+// ✅ Chip status PDF — tampil di kolom AKSI menggantikan tombol view selama job berjalan
+function pdfChipInline(rowId) {
+return `<div id="pdf-chip-${rowId}" class="pdf-status-chip pdf-chip-rendering" style="margin:0"><div class="pdf-spin"></div><span>PDF...</span></div>`;
+}
+// ✅ "Reserve" PDF — tandai row SESAAT SETELAH KLIK (fase optimistic),
+// sebelum job benar-benar di-enqueue, agar tombol view tidak sempat terlihat.
+const PDF_RESERVED = new Set();
+function reservePdf(rowId, type)  { PDF_RESERVED.add(rowId + ':' + type); }
+function releasePdf(rowId, type)  { PDF_RESERVED.delete(rowId + ':' + type); }
+function isPdfBusy(rowId, type)   {
+return PDF.isPending(rowId, type) || PDF_RESERVED.has(rowId + ':' + type);
+}
+
+// ==================== SILENT REFRESH — TANPA "RELOAD" ====================
+// (1) tidak ada perubahan → DOM tidak disentuh;
+// (2) ada perubahan → render cepat tanpa skeleton, scroll & pencarian
+//     dipertahankan, hanya baris BARU yang diberi animasi flash.
+async function silentUnitRefresh() {
+  if (!APP.currentUnit || APP.currentUnit === 'ALL') return;
+  const c = $('subContent');
+  if (!c || !c.querySelector('table')) return;
+
+  // 1) Kunci keadaan UI yang harus dipertahankan
+  const scrollY  = window.scrollY;
+  const searchEl = document.getElementById('tableSearchInput');
+  const q        = searchEl ? searchEl.value : '';
+
+  // 2) Signature murah — jika sama, SELESAI (nol kerjaan DOM)
+  const sig = r => [r.rowId, r.statusFlow, r.invoiceNo, r.acid, r.registration,
+                    r.totalAmount, r.isArchived, r.isDone, r.atd, r.ata].join('|');
+  const oldSig = (APP.unitDataRaw || []).map(sig).join('~');
+
+  let res;
+  try {
+    // ⚠️ Samakan nama fungsi & argumen dengan pemanggilan server
+    //    di dalam fetchUnitData() Anda
+    res = await _gsRun('getUnitData',
+      [APP.currentUnit, sessionStorage.getItem('airnav_user'), authToken()], 15000);
+  } catch (e) { return; } // gagal silent → abaikan, siklus polling berikutnya mencoba lagi
+  if (!res?.success || !Array.isArray(res.data)) return;
+
+  const newRaw = res.data;
+  if (newRaw.map(sig).join('~') === oldSig) return; // ← TIDAK ADA PERUBAHAN
+
+  // 3) Ada perubahan → catat rowId baru SEBELUM menimpa data
+  const prevIds  = new Set((APP.unitDataRaw || []).map(r => r.rowId));
+  const addedIds = newRaw.filter(r => !prevIds.has(r.rowId)).map(r => r.rowId);
+
+  APP.unitDataRaw = newRaw;
+  APP.unitCache[APP.currentUnit] = { data: newRaw, timestamp: Date.now(), loading: false };
+
+  // 4) Render cepat (loading:false → tanpa skeleton), lalu pulihkan UI
+  renderTable();
+  // ✅ Silent render: matikan animasi entrance (fadeInUp) seluruh baris,
+  // agar tabel TIDAK terlihat "reload" — hanya baris baru yang beranimasi.
+  c.querySelectorAll('table tbody tr').forEach(tr => { tr.style.animation = 'none'; });
+  requestAnimationFrame(() => {
+    if (searchEl) searchEl.value = q;    // pencarian TIDAK direset
+    window.scrollTo({ top: scrollY });   // scroll TIDAK lompat
+    addedIds.forEach(id => {             // hanya baris baru yang "menyala"
+      const tr = c.querySelector(`tr[data-rowid="${id}"]`) ||
+                 c.querySelector(`.row-cb[data-rowid="${id}"]`)?.closest('tr');
+      if (tr) tr.classList.add('row-flash');
+    });
+  });
+
+  // 5) Badge & layout diperbarui lembut (tanpa skeleton dashboard)
+  recalcLocalBadges();
+  renderUnitLayout();
+  refreshDashboard(false);
+}
+
 // ==================== RENDER TABLE ====================
 function renderTable() {
   const c = $('subContent');
   if (!c) { setTimeout(renderTable, 100); return; }
+
+  // ✅ Sekali pakai: true hanya jika di-set eksplisit sebelum memanggil
+  // renderTable() dari aksi lokal (tambah/edit/hapus satu baris).
+  const rowAnimClass = APP._skipRowAnim ? '' : 'row-enter';
+  APP._skipRowAnim = false;
 
   const active = APP.unitDataRaw.filter(
     r => r.isDeleted !== true && String(r.isDeleted).toUpperCase() !== 'TRUE'
@@ -7103,7 +7179,7 @@ function renderTable() {
     }
     return r.statusFlow === smap[APP.currentSub];
   })
-  .sort((a, b) => (b.rowId || 0) - (a.rowId || 0));
+  .sort((a, b) => (a.rowId || 0) - (b.rowId || 0));
 
   let html = '';
   // Ambil data config untuk persentase pajak
@@ -7237,7 +7313,7 @@ function renderTable() {
                 <span class="sr-only">Hapus</span>
                 </button>`;
 
-              return `<tr style="${isValidated && !isUnitAdmin() ? 'opacity:.72' : ''}">
+              return `<tr data-rowid="${r.rowId}" class="${rowAnimClass}" style="${isValidated && !isUnitAdmin() ? 'opacity:.72' : ''}">
                 <td style="text-align:center;color:var(--text-tertiary)">${i + 1}</td>
                 <td class="td-bold td-mono">${r.unitCode || '—'}</td>
                 <td>${fmtDate(r.flightDate)}</td>
@@ -7300,9 +7376,14 @@ function renderTable() {
       const withBtnLoading = (btn, fn) => {
         if (btn.classList.contains('is-loading')) return;
         btn.classList.add('is-loading');
-        const revert = () => btn.classList.remove('is-loading');
-        Promise.resolve().then(fn).then(revert, revert); // tunggu async selesai
-        setTimeout(revert, 20000); // failsafe
+        let settled = false;
+        const revert = () => { settled = true; btn.classList.remove('is-loading'); };
+        Promise.resolve().then(fn).then(revert, revert);
+        setTimeout(() => {
+          if (settled) return;
+          revert();
+          TOAST.warn('Koneksi lambat — coba lagi jika data belum berubah');
+        }, 12000); // failsafe lebih responsif untuk jaringan mobile
       };
     c.querySelectorAll('.edit-btn').forEach(b =>
       b.onclick = () => withBtnLoading(b, () => showEditFlightModal(+b.dataset.rowid)));
@@ -7417,7 +7498,7 @@ function renderTable() {
             const sb = r.statusFlow === 'INVOICED' ? 'badge-invoiced'
                      : r.statusFlow === 'UNPAID'   ? 'badge-unpaid'
                      : 'badge-paid';
-            return `<tr>
+            return `<tr data-rowid="${r.rowId}" class="${rowAnimClass}">
               <td style="text-align:center">
                 <input type="checkbox" class="row-cb" data-rowid="${r.rowId}">
               </td>
@@ -7469,11 +7550,13 @@ function renderTable() {
                 <div style="display:flex;gap:.3rem;justify-content:center">
                   ${APP.currentSub === 'invoice'
                     ? `
-                      <button class="ab ab-eye preview-btn"
+                        ${PDF.isPending(r.rowId, 'invoice')
+                        ? pdfChipInline(r.rowId)
+                        : `<button class="ab ab-eye preview-btn"
                         data-rowid="${r.rowId}" data-type="invoice" title="Preview Invoice">
                         <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="ab ab-done done-btn" data-rowid="${r.rowId}"
+                        </button>`}
+                        <button class="ab ab-done done-btn" data-rowid="${r.rowId}"
                         title="Pindah ke Pending Kwitansi"
                         style="background:rgba(20,184,166,.12);color:var(--teal-400)">
                         <i class="fas fa-file-signature"></i>
@@ -7488,11 +7571,13 @@ function renderTable() {
                         const isPaid = r.statusFlow === 'PAID';
                         return isPaid
                           ? `
-                            <button class="ab ab-eye preview-kwt-btn"
-                              data-rowid="${r.rowId}" title="Preview Kwitansi"
-                              style="background:rgba(139,92,246,.12);color:var(--purple-400)">
-                              <i class="fas fa-receipt"></i>
-                            </button>
+                            ${isPdfBusy(r.rowId, 'kwitansi')
+                              ? pdfChipInline(r.rowId)
+                              : `<button class="ab ab-eye preview-kwt-btn"
+                                data-rowid="${r.rowId}" title="Preview Kwitansi"
+                                style="background:rgba(139,92,246,.12);color:var(--purple-400)">
+                                <i class="fas fa-receipt"></i>
+                              </button>`}
                             <button class="ab ab-done archive-btn" data-rowid="${r.rowId}"
                               title="Selesai — Pindahkan ke Billing History"
                               style="background:rgba(16,185,129,.12);color:var(--emerald-400)">
@@ -7517,18 +7602,21 @@ function renderTable() {
                   ${APP.currentSub === 'database'
                     ? (() => {
                         const st = r.statusFlow;
-                        const btnInvoice = `
-                          <button class="ab ab-eye preview-inv-btn"
+                        const btnInvoice = isPdfBusy(r.rowId, 'invoice')
+                          ? pdfChipInline(r.rowId)
+                          : `<button class="ab ab-eye preview-inv-btn"
                             data-rowid="${r.rowId}" title="Preview Invoice"
                             style="background:rgba(59,130,246,.12);color:var(--brand-400)">
                             <i class="fas fa-file-invoice"></i>
                           </button>`;
                         const btnKwitansi = (st === 'PAID')
-                          ? `<button class="ab ab-eye preview-kwt-btn"
-                              data-rowid="${r.rowId}" title="Preview Kwitansi"
-                              style="background:rgba(139,92,246,.12);color:var(--purple-400)">
-                              <i class="fas fa-receipt"></i>
-                            </button>`
+                          ? (isPdfBusy(r.rowId, 'kwitansi')
+                              ? pdfChipInline(r.rowId)
+                              : `<button class="ab ab-eye preview-kwt-btn"
+                                data-rowid="${r.rowId}" title="Preview Kwitansi"
+                                style="background:rgba(139,92,246,.12);color:var(--purple-400)">
+                                <i class="fas fa-receipt"></i>
+                              </button>`)
                           : '';
                         return btnInvoice + btnKwitansi;
                       })()
@@ -7604,7 +7692,19 @@ function resetTableSearch() {
     filterTable('');
   }
 }
-
+// ✅ Highlight satu baris (baru ditambah / baru diubah) tanpa membuat
+// seluruh tabel terlihat "reload" — dipanggil setelah renderTable().
+function highlightRow(rowId) {
+  requestAnimationFrame(() => {
+    const tr = document.querySelector(`#subContent tr[data-rowid="${rowId}"]`) ||
+               document.querySelector(`#naTableContent tr[data-rowid="${rowId}"]`);
+    if (!tr) return;
+    tr.classList.remove('row-flash');
+    void tr.offsetWidth; // restart animasi jika dipanggil berturut-turut
+    tr.classList.add('row-flash');
+    tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
 function selectAll(cb){document.querySelectorAll('.row-cb').forEach(x=>x.checked=cb.checked);}
 function getSelectedIds(){return Array.from(document.querySelectorAll('.row-cb:checked')).map(x=>+x.dataset.rowid);}
 
@@ -7940,14 +8040,14 @@ function submitValidate(rowId) {
 
       // ── Step 4: Refresh UI — tabel langsung berubah ──
       OP.step('Membuat PDF...');
+      APP._skipRowAnim = true;
       recalcLocalBadges();
       renderUnitLayout();
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          renderTable();
-          // Inject chip status PDF ke baris yang baru divalidasi
-          setTimeout(() => PDF.injectChip(rowId), 120);
-        }, 50);
+      setTimeout(() => {
+      renderTable();
+      highlightRow(rowId);
+      }, 50);
       });
       refreshDashboard(true);
 
@@ -8075,12 +8175,16 @@ function handleStatusChange(rowId, ns, title, desc) {
         if (ns === 'UNPAID') fields.receiptDate = new Date().toISOString();
         APP.unitDataRaw[idx] = { ...APP.unitDataRaw[idx], ...fields };
         APP.unitCache[APP.currentUnit] = {
-          data: APP.unitDataRaw, timestamp: Date.now(), loading: false
-        };
+        data: APP.unitDataRaw, timestamp: Date.now(), loading: false
+      };
       }
+      // ✅ Tandai SESAAT SETELAH KLIK → render optimistic langsung menampilkan
+      // chip PDF (bukan tombol view) → flash hilang
+      if (ns === 'PAID') reservePdf(rowId, 'kwitansi');
+      APP._skipRowAnim = true;
       recalcLocalBadges();
       renderUnitLayout();
-      requestAnimationFrame(() => setTimeout(() => renderTable(), 50));
+      requestAnimationFrame(() => setTimeout(() => { renderTable(); highlightRow(rowId); }, 50));
 
       if (ns === 'PAID') {
         OP.start('Konfirmasi Pembayaran', ['Update status', 'Buat kwitansi', 'Upload Drive']);
@@ -8091,8 +8195,9 @@ function handleStatusChange(rowId, ns, title, desc) {
       google.script.run
         .withSuccessHandler(res => {
           if (!res?.success) {
-            // Rollback
-            if (idx !== -1) {
+          // Rollback
+          releasePdf(rowId, 'kwitansi');
+          if (idx !== -1) {
               APP.unitDataRaw[idx].statusFlow = ns === 'PAID' ? 'UNPAID' : 'INVOICED';
               APP.unitCache[APP.currentUnit]  = {
                 data: APP.unitDataRaw, timestamp: Date.now(), loading: false
@@ -8112,22 +8217,29 @@ function handleStatusChange(rowId, ns, title, desc) {
           } else if (ns === 'PAID') {
             OP.step('Membuat kwitansi PDF...');
             generateAndUploadPDFWithProgress(rowId, 'kwitansi', (progress, result) => {
-              if (progress === 'rendering') { OP.step('Merender dokumen...'); }
-              else if (progress === 'uploading') { OP.step('Upload ke Drive...'); }
-              else if (progress === 'done') {
-                OP.done('Pembayaran terkonfirmasi');
-                delete APP.unitCache[APP.currentUnit];
-                fetchUnitData(true).then(() => renderTable());
-              } else if (progress === 'failed') {
-                OP.done('Pembayaran terkonfirmasi — PDF dapat digenerate via Preview');
-              }
+            if (progress === 'rendering') { OP.step('Merender dokumen...'); }
+            else if (progress === 'uploading') { OP.step('Upload ke Drive...'); }
+            else if (progress === 'done') {
+            OP.done('Pembayaran terkonfirmasi');
+            delete APP.unitCache[APP.currentUnit];
+            fetchUnitData(true).then(() => renderTable());
+            } else if (progress === 'failed') {
+            OP.done('Pembayaran terkonfirmasi — PDF dapat digenerate via Preview');
+            }
             });
+            // ✅ Job sudah masuk antrian (PDF.isPending = true) → lepas reserve,
+            // selanjutnya chip dikendalikan penuh oleh PDF Manager
+            releasePdf(rowId, 'kwitansi');
+            setTimeout(() => {
+            if (document.getElementById('subContent')) renderTable();
+            }, 80);
             refreshDashboard(true);
             NOTIF.triggerFast();
           }
         })
         .withFailureHandler(err => {
-          OP.fail(String(err?.message || err));
+        releasePdf(rowId, 'kwitansi');
+        OP.fail(String(err?.message || err));
         })
         .updateFlightStatusFlow(rowId, ns, sessionStorage.getItem('airnav_user'), authToken());
     }
@@ -8156,9 +8268,10 @@ function handleArchive(rowId) {
           data: APP.unitDataRaw, timestamp: Date.now(), loading: false
         };
       }
+      APP._skipRowAnim = true;
       recalcLocalBadges();
       renderUnitLayout();
-      requestAnimationFrame(() => setTimeout(() => renderTable(), 50));
+      requestAnimationFrame(() => setTimeout(() => { renderTable(); highlightRow(rowId); }, 50));
 
       _gsRun('updateFlightData', [rowId, { isArchived: true, isDone: true }, sessionStorage.getItem('airnav_user'), authToken()], 15000).then(res => {
         if (!res?.success) {
@@ -8218,6 +8331,7 @@ function localRemoveAndRefresh(rowId, newStatus) {
     loading: false
   };
 
+  APP._skipRowAnim = true;
   recalcLocalBadges();
   if (!isUnitAdmin()) {
     renderDashboard();
@@ -8528,24 +8642,40 @@ function submitNewFlight() {
       }
 
       closeModal();
-      // SATU toast saja
       TOAST.success('Data berhasil disimpan');
 
       FH_CACHE['acid'] = FH_CACHE['registration'] =
       FH_CACHE['aircraftType'] = FH_CACHE['adep'] =
       FH_CACHE['ades'] = null;
 
-      delete APP.unitCache[APP.currentUnit];
+      // ✅ Optimistic insert — TANPA refetch & skeleton penuh.
+      // Baris baru disisipkan lokal; hanya baris itu yang menyala,
+      // baris lain tampil instan tanpa efek "seluruh tabel reload".
+      const newRow = { ...data, rowId: res.rowId, isDeleted: false };
+      APP.unitDataRaw.push(newRow);
+      APP.unitCache[APP.currentUnit] = {
+        data: APP.unitDataRaw, timestamp: Date.now(), loading: false
+      };
+
+      APP._skipRowAnim = true;
+      recalcLocalBadges();
 
       if (isUnitAdmin()) {
-        APP.dashCache = null;
-        fetchUnitData(true).then(() => refreshDashboard(true));
+        renderUnitLayout();
+        requestAnimationFrame(() => setTimeout(() => {
+          renderTable();
+          highlightRow(res.rowId);
+        }, 30));
+        refreshDashboard(true);
       } else {
-        fetchUnitData(true).then(() => {
-          _renderNATable();
-          refreshDashboard(false);
-        });
+        _renderNATable();
+        highlightRow(res.rowId);
+        refreshDashboard(false);
       }
+
+      // Sinkron diam-diam ke server — hanya mengubah UI jika memang
+      // ada perbedaan nyata (lihat silentUnitRefresh), tidak terlihat user.
+      setTimeout(() => silentUnitRefresh(), 4000);
     })
     .withFailureHandler(err => {
       clearTimeout(tmr);
@@ -8732,15 +8862,17 @@ function submitEditFlight(rowId) {
         data: APP.unitDataRaw, timestamp: Date.now(), loading: false
       };
 
+      APP._skipRowAnim = true;
       if (isUnitAdmin()) {
         renderUnitLayout();
         requestAnimationFrame(() => {
           const c = $('subContent');
-          if (c) renderTable();
+          if (c) { renderTable(); highlightRow(rowId); }
         });
         refreshDashboard(true);
       } else {
         _renderNATable();
+        highlightRow(rowId);
       }
     })
     .withFailureHandler(err => {
@@ -9108,7 +9240,7 @@ async function previewDoc(type, rowId) {
       style="height:74vh;display:flex;flex-direction:column;
              align-items:center;justify-content:center;
              gap:.875rem;background:var(--bg-card)">
-      <div style="
+      <div class="ring-spinner" style="
         width:40px;height:40px;
         border:2.5px solid rgba(59,130,246,.2);
         border-top-color:var(--brand-500);
@@ -9275,22 +9407,24 @@ async function previewDoc(type, rowId) {
     const previewHTML = html.replace('</head>', previewCSS + '</head>');
 
     bodyEl.outerHTML = `
-      <div style="height:74vh;overflow:auto;background:#CBD5E1;-webkit-overflow-scrolling:touch">
+      <div id="previewZoomWrap" style="height:74vh;overflow:auto;background:#CBD5E1;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;position:relative">
         <iframe id="previewRenderFrame"
-          style="width:100%;height:100%;min-height:74vh;border:none;display:block"
-          sandbox="allow-same-origin allow-scripts">
+          style="width:100%;height:100%;min-height:74vh;border:none;display:block;transform-origin:0 0"
+          sandbox="allow-same-origin allow-scripts"
+          referrerpolicy="no-referrer">
         </iframe>
       </div>`;
 
     // Inject via srcdoc setelah iframe ada di DOM
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const f = document.getElementById('previewRenderFrame');
+        const f    = document.getElementById('previewRenderFrame');
+        const wrap = document.getElementById('previewZoomWrap');
         if (!f) return;
-        // Gunakan srcdoc — lebih aman dari document.write di Safari
-        f.srcdoc = previewHTML;
-        // Sesuaikan tinggi iframe setelah konten termuat
-        f.onload = () => {
+        let resized = false;
+        const resizeFrame = () => {
+          if (resized) return;
+          resized = true;
           try {
             const iDoc = f.contentDocument || f.contentWindow?.document;
             const pageEl = iDoc?.querySelector('.page');
@@ -9300,6 +9434,13 @@ async function previewDoc(type, rowId) {
             }
           } catch(e) { /* cross-origin — biarkan */ }
         };
+        f.srcdoc = previewHTML;
+        f.onload = resizeFrame;
+        // ✅ Failsafe: sebagian WebKit mobile tidak memicu onload untuk
+        // iframe srcdoc bersandbox pada koneksi lambat — tanpa ini preview
+        // bisa terlihat "macet" tanpa batas waktu.
+        setTimeout(resizeFrame, 3500);
+        if (wrap) attachPinchZoom(wrap, f);
       }, 50);
     });
   }
@@ -9319,6 +9460,9 @@ async function regeneratePDFAndPreview(rowId, type) {
 
   OP.start('Membuat Dokumen', ['Merender dokumen', 'Upload ke Drive']);
   const result = await PDF.enqueue(rowId, type);
+  // ✅ Sembunyikan tombol view di tabel selama job berjalan
+  // (enqueue men-set _pending secara sinkron, aman langsung dirender)
+  if (document.getElementById('subContent')) renderTable();
 
   if (result?.success) {
     OP.done('Dokumen tersimpan di Drive');
@@ -9665,7 +9809,7 @@ async function downloadDoc() {
   // Ambil nama file dari invoice number
   const isKwt = APP._printHTML.includes('Receipt Number');
   const invoiceMatch = APP._printHTML.match(/class="ref-number">([^<]+)</) || [];
-  const invoiceNo = (invoiceMatch[1] || 'DOC').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const invoiceNo = (invoiceMatch[1]|| 'DOC').trim().replace(/[^a-zA-Z0-9_\-.]/g, '_');
   const filename = (isKwt ? 'Kwitansi_' : 'Invoice_') + invoiceNo + '.pdf';
 
   // Tampilkan loading
@@ -9786,9 +9930,6 @@ function doRekap() {
     // Simpan referensi untuk restore manual
     APP._rekapBtn = { el: rekapBtn, origHTML };
   }
-
-  // ── Toast info agar user tahu proses berjalan ──
-  showToast('Menyiapkan data rekap...', 'info');
 
   // Gunakan fallback ke unitDataRaw langsung jika currentUnit kosong
   const resolvedUnit = APP.currentUnit
@@ -9921,7 +10062,7 @@ function doRekap() {
       </div>
       <div id="rekapWrap" style="padding:0;height:78vh;overflow:hidden;background:#E2E8F0">
         <iframe id="rekapFrame" style="width:100%;height:100%;border:none;display:block;transform-origin:top left"
-        sandbox="allow-same-origin allow-scripts" srcdoc=""></iframe>
+        sandbox="allow-same-origin allow-scripts" referrerpolicy="no-referrer" srcdoc=""></iframe>
       </div>
       <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem">
         <div style="display:flex;align-items:center;gap:.5rem">
@@ -11030,7 +11171,6 @@ function updateMobileNavActive(targetPage) {
   const navItems = document.querySelectorAll('.mobile-nav-item');
   navItems.forEach(item => {
   item.classList.remove('active');
-  // ✅ Cocokkan via data-page (dipakai kedua role) ATAU id/onclick (fallback)
   const page = (item.dataset.page || '').toLowerCase();
   const onclickAttr = item.getAttribute('onclick') || '';
   const itemId = item.id || '';
@@ -11042,11 +11182,18 @@ function updateMobileNavActive(targetPage) {
   item.classList.add('active');
   }
   });
-  try { 
-      if (navigator.vibrate) navigator.vibrate(10); 
-  } catch(e) { 
-      /* Silent fail di environment GAS iframe */ 
-  }
+  safeVibrate(10);
+}
+
+// ✅ Panggil vibrate hanya jika iframe ini sudah "diaktivasi" oleh interaksi
+// user secara langsung — mencegah Chrome intervention warning di iframe
+// cross-origin milik Google Apps Script (userCodeAppPanel).
+function safeVibrate(ms) {
+  try {
+    if (!navigator.vibrate) return;
+    if (navigator.userActivation && !navigator.userActivation.isActive) return;
+    navigator.vibrate(ms);
+  } catch(e) { /* silent — getar hanyalah efek kosmetik */ }
 }
 
 // ── Attach touch feedback to all mobile nav items ──
@@ -11090,7 +11237,7 @@ function initNavClickEffect() {
     item.classList.add('clicked');
     setTimeout(() => item.classList.remove('clicked'), 550);
     // 3) Getar halus (jika perangkat mendukung)
-    if (navigator.vibrate) navigator.vibrate(8);
+    safeVibrate(8);
   }, true);
 }
 
@@ -12308,23 +12455,9 @@ function fetchNotifications() {
 }
 
 function _silentFetchUnit() {
-  if (!APP.currentUnit) return;
-  google.script.run
-    .withSuccessHandler(res => {
-      if (!res?.success || !Array.isArray(res.data)) return;
-      APP.unitDataRaw = res.data;
-      APP.unitCache[APP.currentUnit] = {
-        data: res.data, timestamp: Date.now(), loading: false
-      };
-      recalcLocalBadges();
-      renderUnitLayout();
-      requestAnimationFrame(() => setTimeout(() => {
-        const c = $('subContent');
-        if (c) renderTable();
-      }, 50));
-    })
-    .withFailureHandler(() => {})
-    .getUnitData(APP.currentUnit);
+// ✅ Semua refresh latar belakang kini lewat silent diff refresh —
+// tidak ada lagi rebuild tabel penuh ("reload") dari polling.
+silentUnitRefresh();
 }
 
 // ==================== FUNGSI GLOBAL UNTUK LOGO ====================
@@ -12414,6 +12547,8 @@ function initApp() {
 }
 
 window.onload = () => {
+  // Safety-net: buang sisa elemen loading-bar dari versi cache lama (jika ada)
+  document.getElementById('pdfGlobalBar')?.remove();
   initTheme();
 
   // Hapus flag refresh yang di-set sebelum unload
