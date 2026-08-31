@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Download Dokumen — AirNav Indonesia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:#0a1929;color:#fff;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}
+  .box{padding:2rem;max-width:400px}
+  .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);
+    border-top-color:#3b82f6;border-radius:50%;margin:0 auto 1.25rem;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h2{font-size:1rem;font-weight:800;margin-bottom:.5rem}
+  p{font-size:.82rem;color:rgba(255,255,255,.6);line-height:1.5}
+  button{margin-top:1.25rem;padding:.75rem 1.75rem;border:none;border-radius:10px;
+    background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;font-size:.9rem;
+    font-weight:700;cursor:pointer;font-family:inherit}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .err{color:#f43f5e}
+  .debug{margin-top:1.5rem;font-size:.65rem;color:rgba(255,255,255,.3);
+    text-align:left;background:rgba(255,255,255,.04);padding:.6rem;border-radius:6px;
+    max-height:120px;overflow:auto;font-family:monospace;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner" id="sp"></div>
+  <h2 id="title">AirNav Indonesia</h2>
+  <p id="msg">Menyiapkan dokumen...</p>
+  <div id="debug" class="debug"></div>
+</div>
+
+<script>
+// ============================================================
+// DIAGNOSTIC BOOTSTRAP — SCRIPT TERPISAH & INDEPENDEN.
+// Alasan ini WAJIB berdiri sendiri di tag <script> sendiri:
+// jika blok script besar di bawah gagal di-PARSE (syntax error di
+// mana pun dalam ~700 baris kode buildDocHTML dsb), SELURUH isi
+// blok itu tidak akan pernah dieksekusi — termasuk kode diagnostik
+// apa pun yang ditaruh DI DALAMNYA. Blok ini menghindari jebakan
+// tersebut karena diparsing & dijalankan sebagai unit terpisah.
+// ============================================================
+(function() {
+  var sp    = document.getElementById('sp');
+  var msg   = document.getElementById('msg');
+  var dbg   = document.getElementById('debug');
+  var title = document.getElementById('title');
+
+  function reportError(source, message, filename, lineno, colno) {
+    if (sp) sp.style.display = 'none';
+    if (title) title.textContent = 'Gagal Memuat Halaman';
+    if (msg) {
+      msg.className = 'err';
+      msg.textContent = 'Ditemukan masalah teknis (' + source + ') — lihat detail di bawah.';
+    }
+    if (dbg) {
+      dbg.style.display = 'block';
+      dbg.textContent +=
+        '[' + source + '] ' + message + '\n' +
+        (filename ? ('  file: ' + filename + '\n') : '') +
+        (lineno   ? ('  baris: ' + lineno + ', kolom: ' + (colno || '?') + '\n') : '');
+    }
+  }
+
+  // Tangkap SYNTAX ERROR atau RUNTIME ERROR dari script MANA PUN
+  // di halaman ini — termasuk blok script besar yang dimuat sesudah ini.
+  window.addEventListener('error', function(e) {
+    reportError('SCRIPT ERROR', e.message, e.filename, e.lineno, e.colno);
+  });
+
+  // Guard: jika dalam 4 detik penanda dari script besar
+  // (window.__mainScriptLoaded) belum pernah bernilai true,
+  // berarti script besar gagal total sebelum sempat dieksekusi.
+  setTimeout(function() {
+    if (window.__mainScriptLoaded) return;
+    reportError(
+      'BOOT GUARD',
+      'Script utama tidak pernah mulai berjalan setelah 4 detik. ' +
+      'Ini mengindikasikan ada syntax error yang menghentikan seluruh ' +
+      'blok <script> utama sebelum baris pertamanya sempat dieksekusi.'
+    );
+  }, 4000);
+})();
+</script>
+
+<script>
+const LOG = {
+  debug: function(){}, warn: function(){}, error: function(){ console.error.apply(console, arguments); }, info: function(){}
+};
+
+window.addEventListener('error', function(e) {
+  const sp = document.getElementById('sp');
+  const msg = document.getElementById('msg');
+  if (sp) sp.style.display = 'none';
+  if (msg) {
+    msg.className = 'err';
+    msg.textContent = 'Terjadi error: ' + (e.message || 'unknown');
+  }
+  const d = document.getElementById('debug');
+  if (d) {
+    d.style.display = 'block';
+    d.textContent += '[GLOBAL ERROR] ' + e.message + '\n  at ' + e.filename + ':' + e.lineno + '\n';
+  }
+});
+
+window.__flowStarted = false;
+setTimeout(function() {
+  if (window.__flowStarted) return;
+  const sp = document.getElementById('sp');
+  const msg = document.getElementById('msg');
+  if (sp) sp.style.display = 'none';
+  if (msg) {
+    msg.className = 'err';
+    msg.innerHTML =
+      'Halaman gagal memulai proses download.<br>' +
+      'Kemungkinan: versi aplikasi belum diperbarui (redeploy diperlukan) ' +
+      'atau koneksi ke library PDF gagal.';
+  }
+  const d = document.getElementById('debug');
+  if (d) {
+    d.style.display = 'block';
+    d.textContent += '[GUARD] window belum memanggil startDownloadFlow() setelah 3 detik.\n';
+    d.textContent += 'html2canvas tersedia: ' + (typeof html2canvas !== 'undefined') + '\n';
+    d.textContent += 'jsPDF tersedia: ' + (typeof window.jspdf !== 'undefined') + '\n';
+    d.textContent += 'google.script tersedia: ' + (typeof google !== 'undefined' && !!google.script) + '\n';
+  }
+}, 3000);
+
+window.__mainScriptLoaded = true;
+
+const UNITS = {
+  'WAWW':'Cabang Kendari','WAFO':'Unit Morowali','WAWP':'Unit Kolaka',
+  'WAWB':'Unit Bau-Bau','WAWR':'Unit Sugimanuru','WAWD':'Unit Wakatobi'
+};
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function rekbilan(angka) {
+  if (!angka||angka===0) return 'Nol Rupiah';
+  const bil=['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas','Dua Belas','Tiga Belas','Empat Belas','Lima Belas','Enam Belas','Tujuh Belas','Delapan Belas','Sembilan Belas'];
+  const pul=['','','Dua Puluh','Tiga Puluh','Empat Puluh','Lima Puluh','Enam Puluh','Tujuh Puluh','Delapan Puluh','Sembilan Puluh'];
+  function tb(n){
+    if(n<20)return bil[n];if(n<100)return pul[Math.floor(n/10)]+(n%10?' '+bil[n%10]:'');
+    if(n<200)return'Seratus'+(n%100?' '+tb(n%100):'');
+    if(n<1000)return bil[Math.floor(n/100)]+' Ratus'+(n%100?' '+tb(n%100):'');
+    if(n<2000)return'Seribu'+(n%1000?' '+tb(n%1000):'');
+    if(n<1000000)return tb(Math.floor(n/1000))+' Ribu'+(n%1000?' '+tb(n%1000):'');
+    if(n<1000000000)return tb(Math.floor(n/1000000))+' Juta'+(n%1000000?' '+tb(n%1000000):'');
+    return tb(Math.floor(n/1000000000))+' Milyar'+(n%1000000000?' '+tb(n%1000000000):'');
+  }
+  return tb(Math.floor(angka))+' Rupiah';
+}
+
+function buildDocHTML(rec, isInv, previewData) {
+  try {
+    const signRes = previewData.signRes;
+    const bankRes = previewData.bankRes;
+    const cfgRes = previewData.cfgRes;
+    const airlineRes = previewData.airlineRes;
+    const aptRes = previewData.aptRes;
+    const exRateRes = previewData.exRateRes;
+    const e = function(v) { return escapeHtml(String(v == null ? '' : v)); };
+
+    let sign = null;
+    if (rec.signatorySnapshot) {
+      try { sign = JSON.parse(rec.signatorySnapshot); }
+      catch(err) { sign = (signRes && signRes.data) || null; }
+    } else {
+      sign = (signRes && signRes.data) || null;
+    }
+    if (sign && !(sign.qrcodeBase64 && sign.qrcodeBase64.indexOf('data:image') === 0)) {
+      const liveQr = signRes && signRes.data && signRes.data.qrcodeBase64;
+      if (liveQr && liveQr.indexOf('data:image') === 0) sign.qrcodeBase64 = liveQr;
+    }
+    const banks    = (bankRes && bankRes.data) || [];
+    const cfg      = (cfgRes && cfgRes.data) || {};
+    const airlines = (airlineRes && airlineRes.data) || [];
+    const airports = (aptRes && aptRes.data) || [];
+    const exRates  = (exRateRes && exRateRes.data) || [];
+    const defBank  = banks.find(function(b){ return b.isDefault; }) || banks[0] || {};
+
+    function isSameDay(d1, d2) {
+      if (!d1 || !d2) return false;
+      const a = new Date(d1), b = new Date(d2);
+      return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    }
+    let kursAktual = null;
+    if (rec.domInt === 'INTERNATIONAL') {
+      if (rec.kursUsed && parseFloat(rec.kursUsed) >= 1000) {
+        kursAktual = parseFloat(rec.kursUsed);
+      } else {
+        const matched = exRates.find(function(r){ return r.currency === 'USD' && isSameDay(r.updatedAt, rec.flightDate); });
+        kursAktual = matched ? parseFloat(matched.rate) : null;
+      }
+    }
+    if (!kursAktual) kursAktual = parseFloat(cfg.exchangeRate) || 15000;
+
+    let gross = parseFloat(rec.grossAmount) || 0;
+    let vat   = parseFloat(rec.vatAmount)   || 0;
+    let pph   = parseFloat(rec.pphAmount)   || 0;
+    let total = parseFloat(rec.totalAmount) || 0;
+    const totalIDR = total;
+
+    if (!isInv && rec.domInt === 'INTERNATIONAL') {
+      gross = gross / kursAktual;
+      vat   = vat   / kursAktual;
+      pph   = pph   / kursAktual;
+      total = total / kursAktual;
+    }
+
+    const acidFull      = String(rec.acid || '').toUpperCase().trim();
+    const acidPrefix    = acidFull.substring(0, 3);
+    const airlineMatch  = airlines.find(function(a){ return String(a.airlineCode || '').toUpperCase() === acidFull; })
+      || airlines.find(function(a){ return String(a.airlineCode || '').toUpperCase() === acidPrefix; });
+    const airlineName   = (airlineMatch && airlineMatch.airlineName) || rec.acid || '—';
+    const operatorName  = (airlineMatch && airlineMatch.operator)    || airlineName;
+
+    const unitForRule = String(rec.unitCode || (window.APP && window.APP.currentUnit) || '').toUpperCase().trim();
+    const aptRule = airports.find(function(a){
+      return String(a.airportCode || '').toUpperCase().trim() === unitForRule;
+    });
+    let chargeStart = '—', chargeEnd = '—';
+
+    function fmtHMS(t) {
+      if (!t) return '—';
+      const m = String(t).match(/^(\d{1,2}):(\d{2})/);
+      return m ? (m[1].padStart(2,'0') + ':' + m[2] + ':00') : String(t);
+    }
+    if (aptRule) {
+      if (rec.category === 'EXTEND') {
+        chargeStart = fmtHMS(aptRule.normalEnd);
+        chargeEnd   = fmtHMS(rec.dep_arr_loc === 'DEP' ? rec.atd : rec.ata);
+      } else if (rec.category === 'ADVANCE') {
+        chargeStart = fmtHMS(rec.dep_arr_loc === 'DEP' ? rec.atd : rec.ata);
+        chargeEnd   = fmtHMS(aptRule.normalStart);
+      }
+    }
+
+    const vatPct = parseFloat(cfg.vat_percent) || 12;
+    const pphPct = parseFloat(cfg.pph_percent) || 2;
+
+    function fmtUSD(n) {
+      if (!n && n !== 0) return '$ —';
+      return '$\u00A0' + new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+    }
+    function fmtIDRn(n) {
+      if (!n && n !== 0) return 'Rp —';
+      return 'Rp\u00A0' + new Intl.NumberFormat('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+    }
+    function fmtInvoice(n) { return fmtIDRn(n); }
+    function fmtKwitansi(n) { return rec.domInt === 'INTERNATIONAL' ? fmtUSD(n) : fmtIDRn(n); }
+
+    function fmtDateShort(s) {
+      if (!s) return '—';
+      const d = new Date(s); if (isNaN(d)) return String(s);
+      return d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+    }
+
+    const invoiceIssuedDate = rec.validatedAt
+      ? fmtDateShort(new Date(rec.validatedAt))
+      : fmtDateShort(rec.flightDate);
+
+    const receiptIssuedDate = rec.receiptDate ? fmtDateShort(new Date(rec.receiptDate)) : invoiceIssuedDate;
+
+    function durToTime(d) {
+      if (!d || isNaN(d)) return '00:00:00';
+      const totalSeconds = Math.floor(d * 3600);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
+    }
+    function fmtTimeFull(t) {
+      if (!t) return '—';
+      const s = String(t).trim();
+      const m = s.match(/^(\d{1,2}):(\d{2})(:(\d{2}))?$/);
+      if (m) return m[1].padStart(2,'0') + ':' + m[2] + ':' + (m[4] || '00');
+      return s;
+    }
+
+    const duration    = parseFloat(rec.duration) || 1;
+    const grossRaw    = parseFloat(rec.grossAmount) || 0;
+    const kursForCalc = (rec.domInt === 'INTERNATIONAL' && kursAktual > 0) ? kursAktual : 1;
+
+    let rateVal = parseFloat(rec.rateUsed) || 0;
+    if (!rateVal && grossRaw > 0) {
+      rateVal = rec.domInt === 'INTERNATIONAL'
+        ? grossRaw / kursForCalc / duration
+        : grossRaw / duration;
+      LOG.warn('rateUsed kosong — dihitung ulang dari gross:', rateVal);
+    }
+
+    let rateForInvoice = rateVal;
+    if (isInv && rec.domInt === 'INTERNATIONAL') {
+      rateForInvoice = rateVal * kursAktual;
+    }
+
+    function calculateDurationFromStartEnd(start, end) {
+      if (!start || !end || start==='—' || end==='—') return null;
+      const toSeconds = function(t) { const p=String(t).split(':'); return (parseInt(p[0])||0)*3600+(parseInt(p[1])||0)*60+(parseInt(p[2])||0); };
+      let diffSec = toSeconds(end) - toSeconds(start);
+      if (diffSec < 0) diffSec = 0;
+      return String(Math.floor(diffSec/3600)).padStart(2,'0') + ':' + String(Math.floor((diffSec%3600)/60)).padStart(2,'0') + ':' + String(diffSec%60).padStart(2,'0');
+    }
+
+    let durasiInvoice = null;
+    try {
+      if (chargeStart && chargeEnd && chargeStart !== '—' && chargeEnd !== '—')
+        durasiInvoice = calculateDurationFromStartEnd(chargeStart, chargeEnd);
+    } catch(err) {}
+    const finalDurasi = (durasiInvoice && durasiInvoice !== '00:00:00') ? durasiInvoice : durToTime(parseFloat(rec.duration) || 0);
+
+    const signNip = sign && sign.nip ? ('NIP. ' + sign.nip) : '';
+    const qrFallbackSvg = [
+      '<svg width="44" height="44" viewBox="0 0 24 24"',
+      ' style="width:44px;height:44px;fill:#94ABCA;opacity:.5"',
+      ' xmlns="http://www.w3.org/2000/svg">',
+      '<path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zm-10 8h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2z"/>',
+      '</svg>'
+    ].join('');
+
+    let qrBlock = (sign && sign.qrcodeBase64 && sign.qrcodeBase64.indexOf('data:image') === 0)
+      ? ('<img src="' + sign.qrcodeBase64 + '" style="width:100%;height:100%;object-fit:contain;display:block" alt="QR Tanda Tangan">')
+      : qrFallbackSvg;
+
+    const logoSrc = (window.APP && window.APP.logoUrl) || '';
+    const logoBlock = logoSrc
+      ? ('<div style="width:52px;height:52px;border-radius:50%;background:#ffffff;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0"><img style="width:52px;height:52px;object-fit:contain" src="' + logoSrc + '" alt="AirNav Indonesia" onerror="this.remove()"></div>')
+      : ('<div style="width:52px;height:52px;border-radius:50%;border:2.5px solid #0F2D6B;background:linear-gradient(135deg,#0D2451,#1A3F8F);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(10,28,58,.25);flex-shrink:0"><svg width="28" height="28" viewBox="0 0 24 24" style="width:28px;height:28px;fill:#fff" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>');
+
+    const rawBankName = defBank.bankName || '';
+    const bankShortName = rawBankName.replace(/^PT\.\s*/i,'').replace(/\s*\(PERSERO\)\s*,?\s*TBK?/gi,'').replace(/\s*\(PERSERO\)/gi,'').trim() || 'BANK';
+
+    const CSS = [
+      '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
+      'html, body {',
+      '  font-family: \'IBM Plex Sans\', \'Segoe UI\', \'Helvetica Neue\', Arial, sans-serif;',
+      '  background: #CBD5E1; color: #0A1C3A;',
+      '  -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 13px;',
+      '  width: 210mm; margin: 0 auto; overflow: hidden;',
+      '}',
+      '.page {',
+      '  width: 210mm; height: 297mm; max-height: 297mm;',
+      '  background: #fff; display: flex; flex-direction: column;',
+      '  overflow: hidden; box-shadow: 0 4px 24px rgba(5,14,31,.15); box-sizing: border-box;',
+      '}',
+      '* { box-sizing: border-box; }',
+      '.body-outer { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; }',
+      '.cc-block { margin-top: auto; }',
+      '.org-primary,.title-org,.sign-name,.bank-badge-name,.kwt-from-name,.s-row.total .s-lbl{font-family:\'Playfair Display\',\'Georgia\',\'Times New Roman\',serif;}',
+      '.td-val-mono,.bfield-val.acct,.ref-number,.kwt-amount-num,.charges-tbl tbody td,.dt-val{font-family:\'Courier New\',\'Courier New\',\'Lucida Console\',monospace;}',
+      '.body-outer{padding:0 28px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}',
+      '.fields-table{width:100%;border-collapse:collapse;margin:3px 0;table-layout:fixed;}',
+      '.id-strip{height:4px;flex-shrink:0;background:linear-gradient(90deg,#050E1F 0%,#0F2D6B 30%,#2555B4 60%,#C8102E 85%,#E8213F 100%);}',
+      '.masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px 28px 16px;border-bottom:1px solid #D8E4F0;position:relative;flex-shrink:0;}',
+      '.logo-block{min-width:0;flex-shrink:1;}',
+      '.ref-block{min-width:130px;flex-shrink:0;}',
+      '.logo-block{display:flex;align-items:center;gap:13px;position:relative;}',
+      '.org-primary{font-family:\'Playfair Display\',\'Georgia\',serif;font-size:19px;font-weight:900;color:#0D2451;letter-spacing:-.01em;line-height:1;}',
+      '.org-secondary{font-size:7px;font-weight:600;color:#94ABCA;letter-spacing:.18em;text-transform:uppercase;margin-top:4px;line-height:1;}',
+      '.org-tertiary{font-size:7.5px;font-weight:400;color:#4A6080;margin-top:3px;font-style:italic;}',
+      '.ref-block{text-align:right;position:relative;}',
+      '.ref-label{font-size:7px;font-weight:600;color:#94ABCA;letter-spacing:.16em;text-transform:uppercase;margin-bottom:3px;}',
+      '.ref-number{font-family:\'Courier New\',\'Courier New\',monospace;font-size:10.5px;font-weight:600;color:#0D2451;letter-spacing:.01em;line-height:1.3;word-break:break-all;}',
+      '.ref-date{font-size:9.5px;font-weight:500;color:#4A6080;margin-top:4px;letter-spacing:.02em;}',
+      '.title-section{text-align:center;padding:16px 28px 14px;border-bottom:2px solid #0A1C3A;flex-shrink:0;position:relative;overflow:hidden;}',
+      '.title-section::after{content:\'\';position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent 0%,#C8102E 50%,transparent 100%);opacity:.35;}',
+      '.title-org{font-family:\'Playfair Display\',\'Georgia\',serif;font-size:20px;font-weight:900;color:#0A1C3A;letter-spacing:.04em;text-transform:uppercase;line-height:1;}',
+      '.title-full{font-size:7.5px;font-weight:600;color:#4A6080;letter-spacing:.12em;text-transform:uppercase;margin-top:5px;}',
+      '.title-type-inv{display:inline-block;margin-top:9px;padding:5px 18px;background:#0A1C3A;color:rgba(255,255,255,.92);font-size:10.5px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;border-radius:2px;}',
+      '.title-type-inv::before,.title-type-inv::after{content:\'——\';font-size:9px;color:#C8102E;font-weight:300;letter-spacing:.05em;margin:0 8px;}',
+      '.title-type-kwt{display:inline-block;margin-top:9px;padding:5px 18px;background:#C8102E;color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;border-radius:2px;}',
+      '.fields-table tr{border-bottom:.5px solid #D8E4F0;}',
+      '.fields-table tr:last-child{border-bottom:1.5px solid #0A1C3A;}',
+      '.fields-table td{padding:4px 4px;vertical-align:top;line-height:1.35;}',
+      '.td-lbl{width:170px;max-width:170px;font-size:9px;font-weight:500;color:#4A6080;word-wrap:break-word;overflow-wrap:break-word;}',
+      '.td-lbl em{display:block;font-style:italic;font-size:8px;color:#94ABCA;margin-top:1px;}',
+      '.td-sep{width:14px;font-size:13px;font-weight:300;color:#C8102E;padding-top:4px;flex-shrink:0;}',
+      '.td-val{font-size:10px;font-weight:600;color:#0A1C3A;word-wrap:break-word;overflow-wrap:break-word;}',
+      '.td-val-lg{font-size:11px;font-weight:700;color:#0A1C3A;word-wrap:break-word;overflow-wrap:break-word;}',
+      '.td-val-mono{font-family:\'Courier New\',\'Courier New\',monospace;font-size:9.5px;font-weight:500;}',
+      '.sub-loc-header{display:grid;grid-template-columns:1fr 1fr;font-size:7.5px;font-weight:700;color:#94ABCA;letter-spacing:.1em;text-transform:uppercase;padding-bottom:3px;border-bottom:.5px solid #D8E4F0;margin-bottom:3px;}',
+      '.sub-loc-row{display:grid;grid-template-columns:1fr 1fr;font-size:9.5px;font-weight:600;color:#0A1C3A;line-height:1.5;}',
+      '.sub-loc-empty{color:#94ABCA;font-style:italic;font-size:8.5px;}',
+      '.dt-pair{display:flex;gap:28px;}',
+      '.dt-lbl{font-size:7.5px;font-weight:700;color:#94ABCA;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}',
+      '.dt-val{font-family:\'Courier New\',\'Courier New\',monospace;font-size:10px;font-weight:600;color:#0F2D6B;}',
+      '.charges-section{margin:14px 0 0;}',
+      '.charges-tbl{width:100%;border-collapse:collapse;border:1.5px solid #0A1C3A;table-layout:fixed;}',
+      '.charges-tbl thead th,.charges-tbl tbody td{overflow:hidden;text-overflow:ellipsis;}',
+      '.charges-tbl thead tr{background:#0A1C3A;}',
+      '.charges-tbl thead th{padding:8px;font-size:7.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.82);text-align:center;border-right:1px solid rgba(255,255,255,.1);white-space:nowrap;}',
+      '.charges-tbl thead th:first-child{text-align:left;}',
+      '.charges-tbl thead th:last-child{border-right:none;}',
+      '.charges-tbl tbody tr{border-bottom:.5px solid #D8E4F0;}',
+      '.charges-tbl tbody td{padding:7px 3px;font-family:\'Courier New\',\'Courier New\',monospace;font-size:8px;color:#4A6080;text-align:center;border-right:.5px solid #D8E4F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.charges-tbl tbody td:first-child{font-family:\'IBM Plex Sans\',sans-serif;font-size:10px;font-weight:700;color:#0F2D6B;text-align:center;letter-spacing:.04em;border-right:1.5px solid #B0C4DC;white-space:normal;word-break:break-word;padding:7px 4px;}',
+      '.charges-tbl tbody td.num{font-weight:500;color:#0A1C3A;}',
+      '.charges-tbl tbody td:last-child{border-right:none;font-weight:600;color:#0A1C3A;}',
+      '.summary-block{border-top:1.5px solid #0A1C3A;display:flex;flex-direction:column;align-items:stretch;margin-top:6px;}',
+      '.s-row{display:flex;align-items:center;width:100%;padding:5px 10px;border-bottom:.5px solid #D8E4F0;justify-content:space-between;gap:12px;}',
+      '.s-lbl{white-space:nowrap;flex-shrink:0;}',
+      '.s-val{text-align:right;white-space:nowrap;}',
+      '.s-row:last-child{border-bottom:none;}',
+      '.s-lbl{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#C8102E;}',
+      '.s-val{font-family:\'Courier New\',\'Courier New\',monospace;font-size:9.5px;font-weight:500;color:#C8102E;}',
+      '.s-row.total{background:#0A1C3A;max-width:100%;padding:9px 12px;}',
+      '.s-row.total .s-lbl{font-family:\'Playfair Display\',serif;font-size:11px;font-weight:700;color:rgba(255,255,255,.75);letter-spacing:.22em;}',
+      '.s-row.total .s-val{font-size:15px;font-weight:600;color:#fff;letter-spacing:.02em;}',
+      '.note-box{margin:6px 0 0;padding:5px 10px;background:#F7F9FD;border-left:2.5px solid #2555B4;font-size:7px;color:#4A6080;font-style:italic;line-height:1.4;}',
+      '.section-heading{font-size:7.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#0F2D6B;display:flex;align-items:center;gap:10px;margin-bottom:8px;}',
+      '.section-heading::after{content:\'\';flex:1;height:1px;background:linear-gradient(90deg,#B0C4DC,transparent);}',
+      '.bank-card{display:flex;border:1.5px solid #0F2D6B;border-radius:3px;overflow:hidden;}',
+      '.bank-stripe{width:4px;flex-shrink:0;background:linear-gradient(180deg,#0F2D6B 0%,#2555B4 50%,#C8102E 100%);}',
+      '.bank-fields{flex:1;padding:7px 14px;display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;min-width:0;}',
+      '.bfield-val{font-size:9.5px;font-weight:600;color:#0A1C3A;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;}',
+      '.bfield-val.acct{font-family:\'Courier New\',\'Courier New\',monospace;font-size:12px;font-weight:600;color:#0F2D6B;letter-spacing:.02em;word-break:break-all;}',
+      '.bank-badge{width:72px;flex-shrink:0;background:#0A1C3A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;}',
+      '.bank-badge-name{font-family:\'Playfair Display\',serif;font-size:13px;font-weight:700;color:#fff;letter-spacing:.04em;text-align:center;width:100%;line-height:1.25;}',
+      '.bank-badge-sub{font-size:6px;font-weight:500;color:rgba(255,255,255,.45);text-align:center;line-height:1.4;letter-spacing:.04em;}',
+      '.sign-row{display:flex;justify-content:flex-end;padding:8px 0 6px;}',
+      '.sign-block{text-align:center;}',
+      '.sign-title{font-size:8px;font-weight:600;color:#94ABCA;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;}',
+      '.sign-qr-frame{width:64px;height:64px;border:1.5px solid #0F2D6B;border-radius:4px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;background:#fff;}',
+      '.sign-line{width:160px;height:1.5px;background:#0A1C3A;margin:0 auto 5px;}',
+      '.sign-name{font-family:\'Playfair Display\',serif;font-size:13px;font-weight:700;color:#0F2D6B;letter-spacing:.01em;}',
+      '.sign-nip{font-size:8px;color:#94ABCA;margin-top:2px;}',
+      '.cc-block{padding:6px 0 10px;border-top:.5px solid #D8E4F0;display:flex;align-items:flex-start;gap:14px;margin-top:auto;}',
+      '.cc-head{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#0F2D6B;white-space:nowrap;padding-top:1px;}',
+      '.cc-items{display:flex;gap:18px;}',
+      '.cc-item{font-size:9px;color:#4A6080;}',
+      '.id-bar-bottom{height:5px;flex-shrink:0;background:linear-gradient(90deg,#C8102E 0%,#2555B4 35%,#0F2D6B 65%,#050E1F 100%);margin-top:auto;}',
+      '.kwt-hero{background:#0A1C3A;position:relative;overflow:hidden;flex-shrink:0;}',
+      '.kwt-hero::before{content:\'\';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 90% 50%,rgba(200,16,46,.28) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 10% 50%,rgba(37,85,180,.38) 0%,transparent 60%);}',
+      '.kwt-hero-inner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:18px 28px;gap:20px;}',
+      '.kwt-from-label{font-size:7.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:5px;}',
+      '.kwt-from-name{font-family:\'Playfair Display\',serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:-.01em;word-wrap:break-word;overflow-wrap:break-word;max-width:260px;line-height:1.25;}',
+      '.kwt-amount-block{text-align:right;flex-shrink:0;}',
+      '.kwt-amount-lbl{font-size:7px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:4px;}',
+      '.kwt-amount-num{font-family:\'Courier New\',\'Courier New\',monospace;font-size:21px;font-weight:600;color:#fff;letter-spacing:.01em;line-height:1;white-space:nowrap;}',
+      '.kwt-currency{font-size:12px;font-weight:400;color:rgba(255,255,255,.6);vertical-align:super;margin-right:3px;}',
+      '.kwt-terbilang{background:#FDEEF1;border-left:3px solid #C8102E;padding:8px 28px;font-size:8.5px;font-style:italic;color:#9B0D22;line-height:1.55;flex-shrink:0;}',
+      '.kwt-terbilang strong{font-style:normal;font-weight:700;color:#C8102E;margin-right:4px;}',
+      '@media print{',
+      'html,body{background:#fff;width:210mm;height:auto;overflow:hidden;}',
+      '.page{margin:0;box-shadow:none;width:210mm;height:297mm;max-height:297mm;overflow:hidden;page-break-after:avoid;page-break-inside:avoid;}',
+      '@page{size:A4;margin:0;}',
+      '}'
+    ].join('\n');
+
+    const invoiceHTML = '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invoice ' + (rec.invoiceNo||'') + '</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>' + CSS + '</style></head><body><div class="page"><div class="id-strip"></div><div class="masthead"><div class="logo-block">' + logoBlock + '<div><div class="org-primary">AirNav Indonesia</div><div class="org-secondary">Perum LPPNPI &middot; ' + (UNITS[rec.unitCode]||'') + '</div><div class="org-tertiary">Lembaga Penyelenggara Pelayanan Navigasi Penerbangan Indonesia</div></div></div><div class="ref-block"><div class="ref-label">No</div><div class="ref-number">' + (rec.invoiceNo||'—') + '</div><div class="ref-label" style="margin-top:6px">Tanggal / Date</div><div class="ref-date">' + invoiceIssuedDate + '</div></div></div><div class="title-section"><div class="title-org">AIRNAV INDONESIA</div><div class="title-full">Perum Lembaga Penyelenggara Pelayanan Navigasi Penerbangan Indonesia</div><div class="title-type-inv">' + ((rec.category || '').toUpperCase() === 'ADVANCE' ? 'Advance Charges' : (rec.category || '').toUpperCase() === 'EXTEND' ? 'Extend Charges' : 'Advanced / Extended Charges') + '</div></div><div class="body-outer"><table class="fields-table"><tr><td class="td-lbl">AIRLINE<em>Airline</em></td><td class="td-sep">:</td><td class="td-val td-val-lg">' + e(airlineName) + '</td></tr><tr><td class="td-lbl">GROUND HANDLING</td><td class="td-sep">:</td><td class="td-val">' + e(operatorName) + '</td></tr><tr><td class="td-lbl">NOMOR PENERBANGAN<em>Flight Number</em></td><td class="td-sep">:</td><td class="td-val" style="line-height:1.7">1.&nbsp;' + (e(rec.acid)||'—') + '<br><span style="color:#94ABCA">2.</span></td></tr><tr><td class="td-lbl">REGISTRASI<em>Registration</em></td><td class="td-sep">:</td><td class="td-val td-val-mono">' + (rec.registration||'—') + '</td></tr><tr><td class="td-lbl">JENIS PESAWAT<em>Type of Aircraft</em></td><td class="td-sep">:</td><td class="td-val td-val-mono">' + (rec.aircraftType||'—') + '</td></tr><tr><td class="td-lbl">KEBERANGKATAN<em>Departed</em></td><td class="td-sep">:</td><td class="td-val"><div class="sub-loc-header"><span>Location</span><span>Remark</span></div><div class="sub-loc-row"><span>1.&nbsp;' + (rec.adep||'—') + '</span><span>1.&nbsp;' + (rec.adep||'—') + '–' + (rec.ades||'—') + '</span></div><div class="sub-loc-row"><span class="sub-loc-empty">2.</span><span class="sub-loc-empty">2.</span></div></td></tr><tr><td class="td-lbl">KEDATANGAN<em>Arrival</em></td><td class="td-sep">:</td><td class="td-val" style="line-height:1.7">1.&nbsp;' + (rec.ades||'—') + '<br><span class="sub-loc-empty">2.</span></td></tr><tr><td class="td-lbl">TANGGAL &amp; WAKTU KEBERANGKATAN<em>Departure Date &amp; Time</em></td><td class="td-sep">:</td><td class="td-val"><div class="dt-pair"><div><div class="dt-lbl">Date</div><div class="dt-val">' + (rec.flightDate||'—') + '</div></div><div><div class="dt-lbl">ATD / Actual Time Departure</div><div class="dt-val">' + fmtTimeFull(rec.atd) + '</div></div></div></td></tr><tr><td class="td-lbl">TANGGAL &amp; WAKTU KEDATANGAN<em>Arrival Date &amp; Time</em></td><td class="td-sep">:</td><td class="td-val"><div class="dt-pair"><div><div class="dt-lbl">Date</div><div class="dt-val">' + (rec.flightDate||'—') + '</div></div><div><div class="dt-lbl">ATA / Actual Time Arrival</div><div class="dt-val">' + fmtTimeFull(rec.ata) + '</div></div></div></td></tr><tr><td class="td-lbl">DIBAYAR OLEH<em>Fee Will Be Paid By</em></td><td class="td-sep">:</td><td class="td-val">' + e(operatorName) + '</td></tr></table><div class="charges-section"><table class="charges-tbl"><thead><tr><th style="text-align:left;width:15%">Advanced/Extended Charges</th><th>Start</th><th>End</th><th>Duration</th><th>Rate</th><th>Gross</th><th>PPN/VAT ' + vatPct + '%</th><th>Net</th></tr></thead><tbody><tr><td style="vertical-align:middle;padding:9px 8px">' + (rec.category||'—') + '</td><td>' + chargeStart + '</td><td>' + chargeEnd + '</td><td class="num">' + finalDurasi + '</td><td style="text-align:right">' + fmtIDRn(rateForInvoice) + '</td><td style="text-align:right">' + fmtInvoice(gross) + '</td><td style="text-align:right;color:#C8102E">' + fmtInvoice(vat) + '</td><td style="text-align:right;font-weight:700;color:#0F2D6B">' + fmtInvoice(gross+vat) + '</td></tr></tbody></table><div class="summary-block"><div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:5px 8px;"><span style="color:#e11d48;font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;">PPh PASAL 23</span><span style="font-family:\'Courier New\',\'Courier New\',monospace;font-size:9.5px;font-weight:500;color:#e11d48;">' + fmtInvoice(pph) + '</span></div><div class="s-row total"><span class="s-lbl">T &nbsp;O &nbsp;T &nbsp;A &nbsp;L</span><span class="s-val">' + fmtInvoice(total) + '</span></div></div></div><div class="note-box"><strong>Note :</strong> Berdasarkan PMK No.131 Tahun 2024 menggunakan DPP Lain-lain (11/12 &times; harga jual / penggantian) &times; ' + vatPct + '%</div><div class="bank-section" style="margin:8px 0 0"><div class="section-heading">Detail Bank Transfer</div><div class="bank-card"><div class="bank-stripe"></div><div class="bank-fields"><div><div class="bfield-lbl">Nama Bank</div><div class="bfield-val">' + (defBank.bankName||'—') + '</div></div><div><div class="bfield-lbl">No. Rekening</div><div class="bfield-val acct">' + (defBank.accountNumber||'—') + '</div></div><div><div class="bfield-lbl">Nama Cabang</div><div class="bfield-val">' + (defBank.branch||'—') + '</div></div><div><div class="bfield-lbl">Nama Rekening</div><div class="bfield-val">' + (defBank.accountName||'—') + '</div></div></div><div class="bank-badge"><div class="bank-badge-name">' + bankShortName + '</div></div></div></div><div class="sign-row"><div class="sign-block"><div class="sign-title">Petugas Official AIRNAV INDONESIA</div><div class="sign-qr-frame">' + qrBlock + '</div><div class="sign-line"></div><div class="sign-name">' + ((sign && sign.name) || '—') + '</div>' + (signNip ? ('<div class="sign-nip">' + signNip + '</div>') : '') + '</div></div><div class="cc-block"><div class="cc-head">CC :</div><div class="cc-items"><div class="cc-item">1. Customer</div><div class="cc-item">2. Finance</div><div class="cc-item">3. File</div></div></div></div><div class="id-bar-bottom"></div></div></div></body></html>';
+
+    const kwitansiHTML = '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kwitansi ' + (rec.invoiceNo||'') + '</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>' + CSS + '</style></head><body><div class="page"><div class="id-strip" style="background:linear-gradient(90deg,#050E1F 0%,#0F2D6B 40%,#C8102E 80%,#E8213F 100%)"></div><div class="masthead"><div class="logo-block">' + logoBlock + '<div><div class="org-primary">AirNav Indonesia</div><div class="org-secondary">Perum LPPNPI &middot; ' + (UNITS[rec.unitCode]||'') + '</div><div class="org-tertiary">Lembaga Penyelenggara Pelayanan Navigasi Penerbangan Indonesia</div></div></div><div class="ref-block"><div class="ref-label">Receipt Number</div><div class="ref-number">' + (rec.invoiceNo||'—') + '</div><div class="ref-label" style="margin-top:6px">Tanggal / Date</div><div class="ref-date">' + receiptIssuedDate + '</div></div></div><div class="title-section"><div class="title-org">AIRNAV INDONESIA</div><div class="title-full">Perum Lembaga Penyelenggara Pelayanan Navigasi Penerbangan Indonesia</div><div class="title-type-kwt">' + ((rec.category || '').toUpperCase() === 'ADVANCE' ? 'Advance Charges' : (rec.category || '').toUpperCase() === 'EXTEND' ? 'Extend Charges' : 'Advanced / Extended Charges') + '</div></div><div class="kwt-hero"><div class="kwt-hero-inner"><div><div class="kwt-from-label">Diterima Dari / Received From</div><div class="kwt-from-name">' + e(operatorName) + '</div></div><div class="kwt-amount-block"><div class="kwt-amount-lbl">Sejumlah / Amount</div><div class="kwt-amount-num"><span class="kwt-currency">' + (rec.domInt==='INTERNATIONAL'?'USD':'Rp') + '</span>' + (rec.domInt==='INTERNATIONAL'?new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(total):new Intl.NumberFormat('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}).format(total)) + '</div></div></div></div><div class="kwt-terbilang"><strong>Terbilang / Say :</strong> ' + rekbilan(totalIDR) + '</div><div class="body-outer"><table class="fields-table" style="margin-top:6px"><tr><td class="td-lbl">TANGGAL TERBIT<em>Issued Date</em></td><td class="td-sep">:</td><td class="td-val td-val-mono">' + receiptIssuedDate + '</td></tr><tr><td class="td-lbl">TANGGAL PENERBANGAN<em>Flight Date</em></td><td class="td-sep">:</td><td class="td-val td-val-mono">' + fmtDateShort(rec.flightDate) + '</td></tr><tr><td class="td-lbl">TERIMA DARI<em>Received From</em></td><td class="td-sep">:</td><td class="td-val td-val-lg">' + e(operatorName) + '</td></tr><tr><td class="td-lbl">SEJUMLAH<em>Amount</em></td><td class="td-sep">:</td><td class="td-val td-val-mono" style="color:#0F2D6B">' + fmtKwitansi(total) + '</td></tr><tr><td class="td-lbl">KURS<em>Exchange Rate</em></td><td class="td-sep">:</td><td class="td-val" style="color:#94ABCA">' + (rec.domInt==='INTERNATIONAL'?fmtIDRn(kursAktual):'Rp —') + '</td></tr><tr><td class="td-lbl">TERBILANG<em>Say</em></td><td class="td-sep">:</td><td class="td-val" style="font-style:italic;color:#4A6080;font-size:9px;line-height:1.5">' + rekbilan(totalIDR) + '</td></tr><tr><td class="td-lbl">PEMBAYARAN<em>Payment</em></td><td class="td-sep">:</td><td class="td-val" style="font-weight:700;color:#C8102E">' + (rec.category||'—') + ' CHARGES</td></tr><tr><td class="td-lbl">JUMLAH YANG DIBAYARKAN<em>Amount To Paid</em></td><td class="td-sep">:</td><td class="td-val"><span style="color:#4A6080;font-size:9px;margin-right:4px">Rp</span><span class="td-val-mono td-val-lg" style="color:#0F2D6B">' + new Intl.NumberFormat('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalIDR) + '</span></td></tr></table><div class="sign-row" style="padding-top:24px"><div class="sign-block"><div class="sign-title">Petugas Official AIRNAV INDONESIA</div><div class="sign-qr-frame" style="border-color:#C8102E">' + qrBlock + '</div><div class="sign-line"></div><div class="sign-name">' + ((sign && sign.name) || '—') + '</div>' + (signNip ? ('<div class="sign-nip">' + signNip + '</div>') : '') + '</div></div><div class="cc-block"><div class="cc-head">CC :</div><div class="cc-items"><div class="cc-item">1. Customer</div><div class="cc-item">2. Finance</div><div class="cc-item">3. File</div></div></div></div><div class="id-bar-bottom" style="background:linear-gradient(90deg,#C8102E 0%,#0F2D6B 50%,#050E1F 100%)"></div></div></body></html>';
+
+    return isInv ? invoiceHTML : kwitansiHTML;
+  } catch (err) {
+    console.error('[buildDocHTML] Error:', err);
+    return null;
+  }
+}
+
+function _dbg(msg) {
+  const d = document.getElementById('debug');
+  d.style.display = 'block';
+  d.textContent += msg + '\n';
+}
+
+// FIX: window.location.search tidak reliable di dalam iframe sandbox
+// HtmlService (googleusercontent.com/userCodeAppPanel) — parameter query
+// pada URL /exec TIDAK otomatis diteruskan ke iframe tersebut. Solusi resmi
+// Google untuk kasus ini adalah google.script.url.getLocation(), yang
+// membaca parameter dari lokasi asli /exec, bukan dari iframe.
+function getUrlParams() {
+  return new Promise(function(resolve) {
+    let settled = false;
+    const done = function(params) {
+      if (settled) return;
+      settled = true;
+      resolve(params || {});
+    };
+
+    // Fallback jika getLocation tidak pernah memanggil callback (jarang,
+    // tapi jaga-jaga agar halaman tidak diam selamanya)
+    const timeoutId = setTimeout(function() {
+      _dbg('[getUrlParams] Timeout menunggu google.script.url.getLocation — fallback ke window.location.search');
+      done(Object.fromEntries(new URLSearchParams(window.location.search)));
+    }, 6000);
+
+    if (window.google && google.script && google.script.url && google.script.url.getLocation) {
+      google.script.url.getLocation(function(location) {
+        clearTimeout(timeoutId);
+        done((location && location.parameter) || {});
+      });
+    } else {
+      clearTimeout(timeoutId);
+      _dbg('[getUrlParams] google.script.url tidak tersedia — fallback ke window.location.search');
+      done(Object.fromEntries(new URLSearchParams(window.location.search)));
+    }
+  });
+}
+
+async function _renderPageToCanvas(html) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:0;left:100%;width:794px;height:1123px;overflow:hidden;pointer-events:none';
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:794px;height:1123px;border:none;display:block;background:#fff';
+  iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+  wrap.appendChild(iframe);
+  document.body.appendChild(wrap);
+
+  // ── FIX: string CSS injeksi dibangun lewat array + join('') ──
+  // Konstruksi lama menyambung 4 baris string dengan operator '+'
+  // yang dimulai persis dengan token 'html' di dalam tanda kutip
+  // tunggal. Jika salah satu tanda kutip tunggal itu rusak/berubah
+  // (mis. akibat proses salin-tempel melalui editor teks kaya),
+  // parser JS berhenti dengan "Unexpected identifier 'html'" dan
+  // seluruh blok <script> gagal total. Larik + join('') di bawah
+  // ini lebih tahan terhadap masalah tersebut dan lebih mudah
+  // diperiksa satu baris demi satu baris bila diperlukan.
+  const injectCSS = [
+    '<style>',
+    'html,body{margin:0 !important;padding:0 !important;width:794px !important;height:1123px !important;overflow:hidden !important;background:#fff !important}',
+    '.page{width:794px !important;height:1123px !important;max-height:1123px !important;overflow:hidden !important;box-shadow:none !important;border-radius:0 !important}',
+    '</style>'
+  ].join('');
+  const renderHTML = html.replace('</head>', injectCSS + '</head>');
+
+  await new Promise(function(resolve) {
+    const t = setTimeout(resolve, 10000);
+    iframe.onload = function() { clearTimeout(t); resolve(); };
+    iframe.onerror = function() { clearTimeout(t); resolve(); };
+    iframe.srcdoc = renderHTML;
+  });
+
+  try {
+    const iDoc = iframe.contentDocument;
+    await Promise.race([(iDoc && iDoc.fonts && iDoc.fonts.ready) || Promise.resolve(), new Promise(function(r){ setTimeout(r, 3000); })]);
+    const imgs = iDoc ? Array.prototype.slice.call(iDoc.querySelectorAll('img')) : [];
+    if (imgs.length) {
+      await Promise.race([
+        Promise.all(imgs.map(function(img) {
+          if (img.complete) return Promise.resolve();
+          return new Promise(function(r) { img.onload = r; img.onerror = r; });
+        })),
+        new Promise(function(r){ setTimeout(r, 5000); })
+      ]);
+      imgs.forEach(function(img) {
+        if (!img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) {
+          img.remove();
+        }
+      });
+      const strayInlineSvgs = iDoc ? Array.prototype.slice.call(iDoc.querySelectorAll('svg')) : [];
+      strayInlineSvgs.forEach(function(svg){ svg.remove(); });
+    }
+  } catch(err) {}
+
+  await new Promise(function(r){ setTimeout(r, 1500); });
+
+  let canvas = null;
+
+  const _h2cBaseOpts = {
+    scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff',
+    logging: false, width: 794, height: 1123, windowWidth: 794, windowHeight: 1123,
+    ignoreElements: function(el) {
+      return el.tagName === 'IMG' &&
+        (!el.complete || el.naturalWidth === 0 || el.naturalHeight === 0);
+    }
+  };
+
+  try {
+    const iDoc = iframe.contentDocument;
+    const pageEl = iDoc ? iDoc.querySelector('.page') : null;
+    if (pageEl) {
+      void pageEl.getBoundingClientRect();
+      await new Promise(function(r){ setTimeout(r, 150); });
+      try {
+        canvas = await html2canvas(pageEl, Object.assign({}, _h2cBaseOpts, { foreignObjectRendering: false }));
+      } catch (e1) {
+        _dbg('Percobaan 1 gagal, retry foreignObjectRendering:true — ' + e1.message);
+        canvas = await html2canvas(pageEl, Object.assign({}, _h2cBaseOpts, { foreignObjectRendering: true }));
+      }
+    }
+  } catch(err) { _dbg('Render error: ' + err.message); }
+
+  wrap.remove();
+  return canvas;
+}
+
+async function buildAndDownload(publicData) {
+  const rec = publicData.flight;
+  const previewData = {
+    signRes:    publicData.signRes || { success: true, data: JSON.parse(rec.signatorySnapshot || '{}') },
+    bankRes:    publicData.bankRes,
+    cfgRes:     publicData.cfgRes,
+    airlineRes: publicData.airlineRes,
+    aptRes:     publicData.aptRes,
+    exRateRes:  { success: true, data: [] }
+  };
+  window.APP = { currentUnit: rec.unitCode, logoUrl: (publicData.logo && publicData.logo.data) || '' };
+
+  document.getElementById('msg').textContent = 'Membangun halaman Invoice...';
+  const invoiceHTML = buildDocHTML(rec, true, previewData);
+  if (!invoiceHTML) throw new Error('Gagal membangun HTML invoice');
+  const invCanvas = await _renderPageToCanvas(invoiceHTML);
+  if (!invCanvas) throw new Error('Gagal merender halaman Invoice ke gambar');
+
+  let kwtCanvas = null;
+  if (rec.statusFlow === 'PAID') {
+    document.getElementById('msg').textContent = 'Membangun halaman Kwitansi...';
+    const kwitansiHTML = buildDocHTML(rec, false, previewData);
+    if (kwitansiHTML) kwtCanvas = await _renderPageToCanvas(kwitansiHTML);
+  }
+
+  document.getElementById('msg').textContent = 'Membuat file PDF...';
+  const jsPDF = window.jspdf.jsPDF;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = pdf.internal.pageSize.getHeight();
+  pdf.addImage(invCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdfW, pdfH);
+  if (kwtCanvas) {
+    pdf.addPage();
+    pdf.addImage(kwtCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdfW, pdfH);
+  }
+
+  const cleanName = (rec.invoiceNo || 'DOC').replace(/[^a-zA-Z0-9_-]/g, '_');
+  pdf.save('Dokumen_' + cleanName + '.pdf');
+}
+
+function detectInAppBrowser() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  const isAndroid = /android/i.test(ua);
+  const isIOS     = /iphone|ipad|ipod/i.test(ua);
+  const inAppSignatures = ['FBAN', 'FBAV', 'Instagram', 'Line/', 'WhatsApp'];
+  const isKnownInApp = inAppSignatures.some(function(sig){ return ua.indexOf(sig) !== -1; });
+  const androidWebViewLikely = isAndroid && ua.indexOf('; wv)') !== -1;
+  return { isAndroid: isAndroid, isIOS: isIOS, inApp: isKnownInApp || androidWebViewLikely };
+}
+
+function clearBoxButtons() {
+  document.querySelectorAll('.box button, .box .oib-wrap').forEach(function(el){ el.remove(); });
+}
+
+function showOpenInBrowserScreen() {
+  const detected = detectInAppBrowser();
+  const isAndroid = detected.isAndroid;
+  const isIOS = detected.isIOS;
+  document.getElementById('sp').style.display = 'none';
+  document.getElementById('title').textContent = 'Buka di Browser';
+  document.getElementById('msg').className = '';
+  document.getElementById('msg').innerHTML =
+    'Link ini terbuka di dalam aplikasi WhatsApp/Instagram, yang sering gagal memuat dokumen.<br>' +
+    'Buka link ini di <strong>Chrome</strong> atau <strong>Safari</strong> untuk hasil yang lebih pasti.';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'oib-wrap';
+  wrap.style.cssText = 'margin-top:1.25rem;display:flex;flex-direction:column;gap:.6rem';
+
+  if (isAndroid) {
+    const openBtn = document.createElement('button');
+    openBtn.textContent = 'Buka di Chrome';
+    openBtn.onclick = function() {
+      const target = window.location.href.replace(/^https?:\/\//, '');
+      window.location.href = 'intent://' + target + '#Intent;scheme=https;package=com.android.chrome;end';
+    };
+    wrap.appendChild(openBtn);
+  }
+
+  const continueBtn = document.createElement('button');
+  continueBtn.textContent = 'Lanjutkan di Sini';
+  continueBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.75)';
+  continueBtn.onclick = function() { startDownloadFlow(); };
+  wrap.appendChild(continueBtn);
+
+  if (isIOS) {
+    const hint = document.createElement('p');
+    hint.style.marginTop = '.5rem';
+    hint.textContent = 'Di iPhone: ketuk ikon "···" atau ikon berbagi di pojok layar, lalu pilih "Buka di Safari".';
+    wrap.appendChild(hint);
+  }
+
+  document.querySelector('.box').appendChild(wrap);
+}
+
+function callServerWithTimeout(fnName, args, timeoutMs) {
+  return new Promise(function(resolve) {
+    let done = false;
+    const timer = setTimeout(function() {
+      if (done) return;
+      done = true;
+      resolve({ __timeout: true });
+    }, timeoutMs);
+
+    let runner = google.script.run
+      .withSuccessHandler(function(res) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .withFailureHandler(function(err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ __error: err });
+      });
+    runner[fnName].apply(runner, args);
+  });
+}
+
+function showRetry(message, retryFn) {
+  document.getElementById('sp').style.display = 'none';
+  document.getElementById('msg').className = 'err';
+  document.getElementById('msg').textContent = message;
+  clearBoxButtons();
+  const btn = document.createElement('button');
+  btn.textContent = 'Coba Lagi';
+  btn.onclick = retryFn;
+  document.querySelector('.box').appendChild(btn);
+}
+
+async function startDownloadFlow() {
+  document.getElementById('sp').style.display = '';
+  document.getElementById('msg').className = '';
+  document.getElementById('msg').textContent = 'Menyiapkan dokumen...';
+  clearBoxButtons();
+
+  const params = await getUrlParams();
+  const rid = params.rid, t = params.t;
+  if (!rid || !t) {
+    document.getElementById('sp').style.display = 'none';
+    document.getElementById('msg').className = 'err';
+    document.getElementById('msg').textContent = 'Parameter link tidak lengkap';
+    _dbg('[startDownloadFlow] params diterima: ' + JSON.stringify(params));
+    return;
+  }
+
+  document.getElementById('msg').textContent = 'Menghubungi server...';
+  const res = await callServerWithTimeout('getPublicDocData', [rid, t], 15000);
+
+  if (res && res.__timeout) {
+    showRetry('Koneksi lambat — server tidak merespons dalam 15 detik. Coba lagi.', startDownloadFlow);
+    return;
+  }
+  if (res && res.__error) {
+    showRetry('Error server: ' + (res.__error.message || res.__error), startDownloadFlow);
+    return;
+  }
+  if (!res || !res.success) {
+    _dbg('[startDownloadFlow] Respons server mentah: ' + JSON.stringify(res));
+    let detail;
+    if (res === null || res === undefined) {
+      // ✅ FIX: res benar-benar null/undefined dari withSuccessHandler —
+      // ini SELALU berarti deployment Web App aktif belum membawa kode
+      // terbaru (karena getPublicDocData versi terbaru selalu mengembalikan
+      // objek dengan _diag, tidak pernah null). Solusi: Deploy > Kelola
+      // Deployment > Edit (ikon pensil) > Versi: "Versi Baru" > Terapkan.
+      detail = 'Deployment Web App belum diperbarui ke versi kode terbaru. ' +
+        'Buka Apps Script Editor → Deploy → Kelola Deployment → Edit → ' +
+        'pilih "Versi Baru" pada dropdown Versi → Deploy ulang.';
+    } else if (!res._diag) {
+      // Respons ada tapi tidak membawa penanda versi baru — deployment
+      // menjalankan kode yang lebih lama dari patch ini.
+      detail = 'Deployment menjalankan kode versi lama (tanpa penanda _diag). ' +
+        'Silakan buat deployment versi baru dari Apps Script Editor.';
+    } else {
+      detail = res.error || 'Gagal memuat data dari server (tidak diketahui penyebabnya).';
+    }
+    showRetry(detail, startDownloadFlow);
+    return;
+  }
+  
+  try {
+    document.getElementById('msg').textContent = 'Membangun dokumen...';
+    await Promise.race([
+      buildAndDownload(res),
+      new Promise(function(_, reject) {
+        setTimeout(function() { reject(new Error('Waktu render habis (45 detik) — coba di Chrome/Safari')); }, 45000);
+      })
+    ]);
+    document.getElementById('sp').style.display = 'none';
+    document.getElementById('msg').className = '';
+    document.getElementById('msg').textContent = 'PDF berhasil diunduh.';
+    clearBoxButtons();
+    const btn = document.createElement('button');
+    btn.textContent = 'Unduh Ulang';
+    btn.onclick = function() { buildAndDownload(res); };
+    document.querySelector('.box').appendChild(btn);
+  } catch(err) {
+    _dbg(err.stack || err.message);
+    showRetry('Gagal membangun PDF: ' + err.message, startDownloadFlow);
+  }
+}
+
+function bootDownloadPage() {
+  window.__flowStarted = true;
+  try {
+    const detected = detectInAppBrowser();
+    if (detected.inApp) {
+      showOpenInBrowserScreen();
+    } else {
+      startDownloadFlow();
+    }
+  } catch (err) {
+    const sp = document.getElementById('sp');
+    const msg = document.getElementById('msg');
+    if (sp) sp.style.display = 'none';
+    if (msg) {
+      msg.className = 'err';
+      msg.textContent = 'Gagal memulai: ' + err.message;
+    }
+    _dbg('[bootDownloadPage] ' + (err.stack || err.message));
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootDownloadPage);
+} else {
+  bootDownloadPage();
+}
+</script>
+</body>
+</html>
