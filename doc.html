@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Download Dokumen — AirNav Indonesia</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230D2451'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>A</text></svg>">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Memuat Dokumen...</div>
+  </div>
+  <div id="wrap"></div>
+  <noscript>JavaScript harus diaktifkan untuk mengunduh dokumen ini.</noscript>
+
+  <script src="js/config.js"></script>
+  <script>
+    // Rute /d/:rid/:token → ?doc=1&rid=..&t=..
+    window.__EMBED_SPEC__ = {
+      buildQuery: function (p) {
+        return 'doc=1&rid=' + encodeURIComponent(p.rid || '') +
+               '&t=' + encodeURIComponent(p.token || '');
+      },
+      title: 'Download Dokumen'
+    };
+  </script>
+  <script src="js/embed.js"></script>
+</body>
+</html>
