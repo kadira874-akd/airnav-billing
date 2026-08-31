@@ -17,11 +17,13 @@
 
   <script src="/js/config.js"></script>
   <script>
-    // Rute /b/:bid/:token → ?batch=1&bid=..&t=..
     window.__EMBED_SPEC__ = {
-      buildQuery: function (p) {
-        return 'batch=1&bid=' + encodeURIComponent(p.bid || '') +
-               '&t=' + encodeURIComponent(p.token || '');
+      buildQuery: function () {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var bid   = parts.length >= 2 ? parts[1] : '';
+        var token = parts.length >= 3 ? parts[2] : '';
+        return 'batch=1&bid=' + encodeURIComponent(bid) +
+               '&t=' + encodeURIComponent(token);
       },
       title: 'Portal Tagihan'
     };
