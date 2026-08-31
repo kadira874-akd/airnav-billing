@@ -12,14 +12,10 @@ window.AIRNAV_CONFIG = {
   APPSCRIPT_QUERY: '?',
 
   /*
-   * Tinggi (px) banner/toolbar Google di bagian atas dokumen Web App.
-   * Nilai ini dipakai untuk "menggeser" iframe ke atas sehingga banner
-   * keluar dari area tampil (keluar dari viewport) dan tidak terlihat.
-   *
-   * Jika di perangkat Anda banner masih tampak separuh → tambah nilai.
-   * Jika konten bawah terpotong (halaman terlalu pendek) → kurangi nilai.
+   * CATATAN: karena Web App Apps Script di-iframe dari domain Vercel,
+   * Google TIDAK menampilkan banner → iframe tampil utuh, TIDAK ada
+   * pemotongan frame. Tidak perlu nilai offset pemotongan lagi.
    */
-  BANNER_HIDE_PX: 42,
 
   // Label situs / nama aplikasi (dipakai judul & fallback loading)
   APP_NAME: 'AirNav Billing',
