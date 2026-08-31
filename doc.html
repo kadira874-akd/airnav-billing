@@ -17,11 +17,13 @@
 
   <script src="/js/config.js"></script>
   <script>
-    // Rute /d/:rid/:token → ?doc=1&rid=..&t=..
     window.__EMBED_SPEC__ = {
-      buildQuery: function (p) {
-        return 'doc=1&rid=' + encodeURIComponent(p.rid || '') +
-               '&t=' + encodeURIComponent(p.token || '');
+      buildQuery: function () {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var rid   = parts.length >= 2 ? parts[1] : '';
+        var token = parts.length >= 3 ? parts[2] : '';
+        return 'doc=1&rid=' + encodeURIComponent(rid) +
+               '&t=' + encodeURIComponent(token);
       },
       title: 'Download Dokumen'
     };
