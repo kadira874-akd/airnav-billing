@@ -46,17 +46,10 @@
     return base + (query ? sep + query.replace(/^[?&]/, '') : '');
   }
 
-  function getOffset() {
-    // Allow override via CSS var / senilai BANNER_HIDE_PX
-    var v = parseInt(CONFIG.BANNER_HIDE_PX, 10);
-    return isNaN(v) ? 0 : v;
-  }
-
   function mount() {
     var root = document.getElementById('wrap');
     if (!root) return;
 
-    var offset = getOffset();
     var src = buildSrc();
 
     // Sembunyikan loading
@@ -66,40 +59,29 @@
     // Bersihkan root
     root.innerHTML = '';
 
-    // Container klip (overflow hidden) — "panggung" aplikasi tanpa banner
+    // Karena Web App Apps Script di-iframe dari domain Vercel (bukan
+    // script.google.com) dengan setXFrameOptionsMode(ALLOWALL), Google
+    // TIDAK menampilkan banner → iframe tampil UTUH penuh, tanpa memotong.
     var stage = document.createElement('div');
     stage.id = 'stage';
-    stage.style.cssText =
-      'position:absolute;inset:0;overflow:hidden;';
+    stage.style.cssText = 'position:absolute;inset:0;';
 
-    // Iframe diperbesar setinggi stage + offset, lalu digeser ke atas
-    // sebesar offset agar banner keluar dari area tampil.
     var frame = document.createElement('iframe');
     frame.id = 'appFrame';
     frame.setAttribute('src', src);
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
     frame.style.cssText =
-      'position:absolute;left:0;top:-' + offset + 'px;' +
-      'width:100%;height:' + (100 + (offset / (window.innerHeight || 800)) * 100) + '%;' +
+      'position:absolute;left:0;top:0;width:100%;height:100%;' +
       'margin:0;padding:0;border:none;display:block;' +
-      'transform:translateY(0);' +
       '-webkit-overflow-scrolling:touch;';
 
-    // Fallback tepat jika global window berubah — hitung ulang tinggi px
-    function resize() {
-      var h = window.innerHeight + offset;
-      frame.style.top = '-' + offset + 'px';
-      frame.style.height = h + 'px';
-    }
     frame.onload = function () {
       if (document.getElementById('loading')) document.getElementById('loading').style.display = 'none';
     };
-    window.addEventListener('resize', resize);
 
     stage.appendChild(frame);
     root.appendChild(stage);
-    resize();
   }
 
   if (document.readyState === 'loading') {
