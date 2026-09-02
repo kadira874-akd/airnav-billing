@@ -36,7 +36,7 @@ function RequireAuth({ children }) {
   return children;
 }
 
-function RootRedirect() {
+function RequireRedirect() {
   const token = useAuthStore((s) => s.token);
   return token ? <Navigate to="/" replace /> : <Navigate to="/login" replace />;
 }
@@ -48,8 +48,7 @@ export default function App() {
         <ThemeSync />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<RootRedirect />} />
-            <Route path="/login/*" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route
               element={
                 <RequireAuth>
@@ -66,7 +65,7 @@ export default function App() {
             {/* Public routes — no auth */}
             <Route path="/b/:bid/:token" element={<PublicBatchPage />} />
             <Route path="/d/:rid/:token" element={<PublicDocPage />} />
-            <Route path="*" element={<RootRedirect />} />
+            <Route path="*" element={<RequireRedirect />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
