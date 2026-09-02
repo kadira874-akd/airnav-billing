@@ -31,7 +31,8 @@ export default function LoginPage() {
       unitCode,
     });
     if (d.token) localStorage.setItem('airnav_token', d.token);
-    if (d.username) localStorage.setItem('airnav_username', d.username);
+    // Backend login tidak return username — ambil dari state input sebagai fallback
+    localStorage.setItem('airnav_username', d.username || username);
     setActiveUnit(unitCode === 'ALL' ? 'ALL' : unitCode);
     navigate('/', { replace: true });
   };

@@ -17,9 +17,12 @@ async function request(action, { method = 'POST', params = {}, body = {}, auth =
   const username = auth?.username || localStorage.getItem('airnav_username') || '';
   const token = auth?.token || localStorage.getItem('airnav_token') || '';
 
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  // PENTING: JANGAN kirim Content-Type: application/json.
+  // Header itu memaksa browser mengirim preflight OPTIONS. Apps Script
+  // ContentService TIDAK menjawab preflight → CORS error "Failed to fetch".
+  // text/plain = "simple request" → tanpa preflight → CORS diizinkan.
+  // Apps Script membaca e.postData.contents tanpa peduli Content-Type.
+  const headers = method === 'GET' ? {} : { 'Content-Type': 'text/plain;charset=UTF-8' };
 
   let url = APPSCRIPT_URL;
   const sep = url.includes('?') ? '&' : '?';
