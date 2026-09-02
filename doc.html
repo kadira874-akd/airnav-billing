@@ -17,6 +17,7 @@
 
   <script src="/js/config.js"></script>
   <script>
+    // Rute /d/:rid/:token → parse dari pathname, bukan query
     window.__EMBED_SPEC__ = {
       buildQuery: function () {
         var parts = window.location.pathname.split('/').filter(Boolean);
