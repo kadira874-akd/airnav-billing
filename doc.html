@@ -29,7 +29,7 @@
         if (!rid || !token) {
           var sp = new URLSearchParams(window.location.search);
           rid   = rid   || sp.get('rid')   || '';
-          token = token || sp.get('token') || '';
+          token = token || sp.get('token') || sp.get('t') || '';
         }
 
         if (!rid || !token) {

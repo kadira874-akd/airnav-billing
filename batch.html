@@ -28,11 +28,11 @@
         var bid   = parts.length >= 2 ? parts[1] : '';
         var token = parts.length >= 3 ? parts[2] : '';
 
-        // Strategi 2 (fallback): ambil dari query params Vercel rewrite
+        // Strategi 2 (fallback): ambil dari query params
         if (!bid || !token) {
           var sp = new URLSearchParams(window.location.search);
           bid   = bid   || sp.get('bid')   || '';
-          token = token || sp.get('token') || '';
+          token = token || sp.get('token') || sp.get('t') || '';
         }
 
         if (!bid || !token) {
