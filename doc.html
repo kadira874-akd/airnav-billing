@@ -17,12 +17,29 @@
 
   <script src="/js/config.js"></script>
   <script>
-    // Rute /d/:rid/:token → parse dari pathname, bukan query
+    // Rute /d/:rid/:token → parse dari pathname ATAU query params
     window.__EMBED_SPEC__ = {
       buildQuery: function () {
+        // Strategi 1: pathname
         var parts = window.location.pathname.split('/').filter(Boolean);
         var rid   = parts.length >= 2 ? parts[1] : '';
         var token = parts.length >= 3 ? parts[2] : '';
+
+        // Strategi 2: query params (fallback)
+        if (!rid || !token) {
+          var sp = new URLSearchParams(window.location.search);
+          rid   = rid   || sp.get('rid')   || '';
+          token = token || sp.get('token') || '';
+        }
+
+        if (!rid || !token) {
+          document.getElementById('loading').innerHTML =
+            '<div style="color:#f43f5e;text-align:center;padding:2rem">' +
+              '<div style="font-size:1rem;font-weight:700;margin-bottom:.5rem">Link Tidak Lengkap</div>' +
+              '<div style="font-size:.82rem;color:#94a3b8">Parameter dokumen tidak ditemukan di URL.</div>' +
+            '</div>';
+          return '';
+        }
         return 'doc=1&rid=' + encodeURIComponent(rid) +
                '&t=' + encodeURIComponent(token);
       },

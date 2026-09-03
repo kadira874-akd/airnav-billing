@@ -17,13 +17,33 @@
 
   <script src="/js/config.js"></script>
   <script>
-    // Rute /b/:bid/:token → parse dari pathname, bukan query
-    // (Vercel rewrite ?param bersifat server-side, tidak terlihat di window.location.search)
+    // Rute /b/:bid/:token → parse dari pathname ATAU query params
+    // Vercel rewrite: /b/:bid/:token → /batch.html?bid=:bid&token=:token
+    // Browser URL bar tetap /b/BATCH-ID/TOKEN (clean URL), tapi
+    // window.location.search juga punya ?bid=...&token=... dari rewrite.
     window.__EMBED_SPEC__ = {
       buildQuery: function () {
+        // Strategi 1: ambil dari pathname (/b/BATCH-ID/TOKEN)
         var parts = window.location.pathname.split('/').filter(Boolean);
         var bid   = parts.length >= 2 ? parts[1] : '';
         var token = parts.length >= 3 ? parts[2] : '';
+
+        // Strategi 2 (fallback): ambil dari query params Vercel rewrite
+        if (!bid || !token) {
+          var sp = new URLSearchParams(window.location.search);
+          bid   = bid   || sp.get('bid')   || '';
+          token = token || sp.get('token') || '';
+        }
+
+        if (!bid || !token) {
+          document.getElementById('loading').innerHTML =
+            '<div style="color:#f43f5e;text-align:center;padding:2rem">' +
+              '<i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:1rem;display:block"></i>' +
+              '<div style="font-size:1rem;font-weight:700;margin-bottom:.5rem">Link Tidak Lengkap</div>' +
+              '<div style="font-size:.82rem;color:#94a3b8">Parameter batch ID atau token tidak ditemukan di URL.</div>' +
+            '</div>';
+          return '';
+        }
         return 'batch=1&bid=' + encodeURIComponent(bid) +
                '&t=' + encodeURIComponent(token);
       },
