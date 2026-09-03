@@ -1,13 +1,15 @@
 {
   "version": 2,
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/app", "destination": "/index.html" },
-    { "source": "/b/:bid/:token", "destination": "/batch.html?bid=:bid&token=:token" },
-    { "source": "/d/:rid/:token", "destination": "/doc.html?rid=:rid&token=:token" },
-    { "source": "/a/:token/:email", "destination": "/auth.html?token=:token&email=:email" }
+    { "source": "/b/:bid/:token", "destination": "/batch.html" },
+    { "source": "/d/:rid/:token", "destination": "/doc.html" },
+    { "source": "/a/:token/:email", "destination": "/auth.html" }
+  ],
+  "routes": [
+    { "src": "/batch", "headers": { "Location": "/batch.html" }, "status": { "code": 301 } },
+    { "src": "/doc", "headers": { "Location": "/doc.html" }, "status": { "code": 301 } }
   ],
   "headers": [
     {
