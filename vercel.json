@@ -1,15 +1,11 @@
 {
   "version": 2,
-  "cleanUrls": false,
+  "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
     { "source": "/b/:bid/:token", "destination": "/batch.html" },
     { "source": "/d/:rid/:token", "destination": "/doc.html" },
     { "source": "/a/:token/:email", "destination": "/auth.html" }
-  ],
-  "routes": [
-    { "src": "/batch", "headers": { "Location": "/batch.html" }, "status": { "code": 301 } },
-    { "src": "/doc", "headers": { "Location": "/doc.html" }, "status": { "code": 301 } }
   ],
   "headers": [
     {
