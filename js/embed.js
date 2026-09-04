@@ -51,10 +51,7 @@
     if (!root) return;
 
     var src = buildSrc();
-
-    // Sembunyikan loading
     var loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'none';
 
     // Bersihkan root
     root.innerHTML = '';
@@ -76,50 +73,32 @@
       'margin:0;padding:0;border:none;display:block;' +
       '-webkit-overflow-scrolling:touch;';
 
-    frame.onload = function () {
-      if (document.getElementById('loading')) document.getElementById('loading').style.display = 'none';
-    };
+    var loaded = false;
 
-    // Timeout: jika iframe gagal load dalam 15 detik, tampilkan pesan error
-    var loadTimeout = setTimeout(function () {
-      var loading = document.getElementById('loading');
-      if (loading && loading.style.display !== 'none') {
-        loading.innerHTML =
-          '<div style="color:#f43f5e;text-align:center;padding:2rem;max-width:400px">' +
-            '<div style="font-size:1.5rem;margin-bottom:1rem">&#9888;</div>' +
-            '<div style="font-size:1rem;font-weight:700;margin-bottom:.5rem">Gagal Memuat Aplikasi</div>' +
-            '<div style="font-size:.82rem;color:#94a3b8;line-height:1.5">' +
-              'Web App Apps Script tidak merespons dalam 15 detik.<br><br>' +
-              'Kemungkinan:<br>' +
-              '1. Web App belum di-deploy<br>' +
-              '2. URL endpoint salah<br>' +
-              '3. Web App sedang down' +
-            '</div>' +
-          '</div>';
-      }
-    }, 15000);
-
-    // Batalkan timeout jika iframe berhasil load
     frame.addEventListener('load', function () {
-      clearTimeout(loadTimeout);
+      loaded = true;
+      if (loading) loading.style.display = 'none';
     });
 
-    // Handle iframe load error
-    frame.addEventListener('error', function () {
-      clearTimeout(loadTimeout);
-      var loading = document.getElementById('loading');
-      if (loading) {
-        loading.innerHTML =
-          '<div style="color:#f43f5e;text-align:center;padding:2rem;max-width:400px">' +
-            '<div style="font-size:1.5rem;margin-bottom:1rem">&#9888;</div>' +
-            '<div style="font-size:1rem;font-weight:700;margin-bottom:.5rem">Gagal Memuat Halaman</div>' +
-            '<div style="font-size:.82rem;color:#94a3b8;line-height:1.5">' +
-              'Tidak dapat terhubung ke server aplikasi.<br>' +
-              'Periksa koneksi internet dan coba muat ulang.' +
-            '</div>' +
-          '</div>';
-      }
-    });
+    // Timeout: jika iframe tidak selesai load dalam 20 detik,
+    // tampilkan pesan error di layar (mengganti loading).
+    setTimeout(function () {
+      if (loaded) return;
+      if (!loading) return;
+      loading.style.display = 'flex';
+      loading.innerHTML =
+        '<div style="color:#f43f5e;text-align:center;padding:2rem;max-width:420px">' +
+          '<div style="font-size:1.5rem;margin-bottom:1rem">&#9888;</div>' +
+          '<div style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Tidak Dapat Memuat Tagihan</div>' +
+          '<div style="font-size:.8rem;color:#94a3b8;line-height:1.6;text-align:left">' +
+            'Server aplikasi tidak merespons. Kemungkinan penyebab:<br><br>' +
+            '&#8226; Web App Apps Script belum di-deploy ke versi terbaru<br>' +
+            '&#8226; URL endpoint tidak sesuai<br>' +
+            '&#8226; Izin akses web app belum "Anyone"<br><br>' +
+            'Hubungi admin AirNav untuk bantuan.' +
+          '</div>' +
+        '</div>';
+    }, 20000);
 
     stage.appendChild(frame);
     root.appendChild(stage);
