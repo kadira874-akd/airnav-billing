@@ -1,12 +1,8 @@
 /* ============================================================
  * embed.js — Memuat Web App Apps Script di dalam iframe (domain Vercel).
  *
- * Google Apps Script selalu menyisipkan strip kosong (~44px) di bagian
- * atas konten web app (iframe internal googleusercontent/userCodeAppPanel).
- * Iframe sengaja digeser naik sebesar strip itu dan dipertinggi sama
- * besar (overscan), sehingga strip GAS keluar dari area tampil dan panel
- * header langsung menempel pada frame tanpa celah. Jika tidak ada strip
- * (mis. GAS berubah perilaku), atur GAS_PANEL_PX = 0 di config.
+ * Iframe dipasang langsung penuh (top:0, 100% width/height) sehingga
+ * panel header menempel pada frame tanpa celah.
  *
  * Cara pakai (semua halaman):
  *   <script src="js/config.js"></script>
@@ -58,27 +54,20 @@
     var src = buildSrc();
     var loading = document.getElementById('loading');
 
-    // Tinggi strip kosong yang disisipkan GAS di atas konten (px).
-    var band = parseInt(CONFIG.GAS_PANEL_PX, 10);
-    if (isNaN(band)) band = 44;
-
     // Bersihkan root
     root.innerHTML = '';
 
     var stage = document.createElement('div');
     stage.id = 'stage';
-    stage.style.cssText = 'position:absolute;inset:0;overflow:hidden;';
+    stage.style.cssText = 'position:absolute;inset:0;';
 
-    // Iframe digeser naik setinggi strip GAS & dipertinggi sama besar,
-    // sehingga strip keluar dari area tampil, panel header menempel frame.
     var frame = document.createElement('iframe');
     frame.id = 'appFrame';
     frame.setAttribute('src', src);
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
     frame.style.cssText =
-      'position:absolute;left:0;top:-' + band + 'px;' +
-      'width:100%;height:calc(100% + ' + band + 'px);' +
+      'position:absolute;left:0;top:0;width:100%;height:100%;' +
       'margin:0;padding:0;border:none;display:block;' +
       '-webkit-overflow-scrolling:touch;';
 
