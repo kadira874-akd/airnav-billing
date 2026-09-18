@@ -60,7 +60,7 @@
     // Tinggi strip GAS (#warning.warning-bar) yang digeser keluar (px).
     // 0 = nonaktif. Default 25 (strip tipis, bukan banner berteks ~44px).
     var band = parseInt(CONFIG.GAS_PANEL_PX, 10);
-    if (isNaN(band) || band < 0) band = 30;
+    if (isNaN(band) || band < 0) band = 25;
 
     // Bersihkan root
     root.innerHTML = '';
