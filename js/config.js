@@ -1,8 +1,7 @@
 /* ============================================================
  * KONFIGURASI SENTRAL — SESUAIKAN DI SINI
  * ============================================================
- * Satu-satunya file yang perlu diedit saat URL Apps Script berubah
- * atau lebar banner Google berubah antar perangkat.
+ * Satu-satunya file yang perlu diedit saat URL Apps Script berubah.
  */
 window.AIRNAV_CONFIG = {
   // Verbatim URL Web App Apps Script (endpoint /exec). Jangan ubah format.
@@ -12,9 +11,8 @@ window.AIRNAV_CONFIG = {
   APPSCRIPT_QUERY: '?',
 
   /*
-   * CATATAN: karena Web App Apps Script di-iframe dari domain Vercel,
-   * Google TIDAK menampilkan banner → iframe tampil utuh, TIDAK ada
-   * pemotongan frame. Tidak perlu nilai offset pemotongan lagi.
+   * NOTE: iframe dipasang UTUH penuh (top:0) — panel header menempel
+   * langsung pada frame tanpa celah.
    */
 
   // Label situs / nama aplikasi (dipakai judul & fallback loading)

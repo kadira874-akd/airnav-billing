@@ -1,8 +1,9 @@
 # AirNav Billing — Front-end (Vercel)
 
 Halaman pembungkus ringkas untuk memuat Web App **Google Apps Script** di dalam
-iframe, lalu **menyembunyikan banner Google** dengan teknik overscan+transform.
-Hasil: URL pendek (bukan `script.google.com`) dan tampilan bersih tanpa banner.
+iframe secara **utuh penuh** (tanpa pemotongan frame). Hasil: URL pendek
+(bukan `script.google.com`) dan panel header langsung menempel pada frame
+tanpa celah.
 
 ## Struktur
 
@@ -13,8 +14,8 @@ vercel-front/
 ├─ batch.html         # Portal tagihan   → iframe ?batch=1&bid=..&t=..
 ├─ doc.html           # Download dokumen → iframe ?doc=1&rid=..&t=..
 ├─ js/
-│  ├─ config.js       # ★ SATU file yang perlu diedit (URL exec + offset banner)
-│  └─ embed.js        # Memuat & menyembunyikan banner
+│  ├─ config.js       # ★ SATU file yang perlu diedit (URL exec)
+│  └─ embed.js        # Memuat Apps Script utuh penuh dalam iframe
 └─ css/
    └─ base.css        # Gaya dark full-screen + loading
 ```
@@ -24,9 +25,6 @@ vercel-front/
 Buka `js/config.js` lalu sesuaikan:
 
 - `APPSCRIPT_URL` — URL `/exec` Web App Apps Script Anda (dari deployment).
-- `BANNER_HIDE_PX` — tinggi banner Google yang disembunyikan (px). Default `42`.
-  - Banner masih tampak separuh → tambah nilainya.
-  - Konten bawah terpotong      → kurangi nilainya.
 - `APP_NAME` — judul situs.
 
 > `PUBLIC_BASE_URL` di sisi **Apps Script** (`code.gs`) harus sama dengan domain

@@ -1,7 +1,7 @@
 /* ============================================================
- * embed.js — Memuat Web App Apps Script di dalam iframe (domain Vercel)
- * dan MENYEMBUNYIKAN banner Google dengan menggeser iframe ke atas
- * (overscan + transform), sehingga URL tetap ringkas & bersih.
+ * embed.js — Memuat Web App Apps Script di dalam iframe (domain Vercel).
+ * Iframe dipasang UTUH (top:0, tanpa offset/transform), sehingga
+ * panel header langsung menempel pada frame tanpa celah.
  *
  * Cara pakai (semua halaman):
  *   <script src="js/config.js"></script>
@@ -56,9 +56,9 @@
     // Bersihkan root
     root.innerHTML = '';
 
-    // Karena Web App Apps Script di-iframe dari domain Vercel (bukan
-    // script.google.com) dengan setXFrameOptionsMode(ALLOWALL), Google
-    // TIDAK menampilkan banner → iframe tampil UTUH penuh, tanpa memotong.
+    // Web App Apps Script di-iframe dari domain Vercel dengan
+    // setXFrameOptionsMode(ALLOWALL). Iframe dipasang UTUH penuh
+    // (top:0) — panel header menempel langsung pada frame, tanpa celah.
     var stage = document.createElement('div');
     stage.id = 'stage';
     stage.style.cssText = 'position:absolute;inset:0;';
