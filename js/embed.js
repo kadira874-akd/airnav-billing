@@ -1,8 +1,11 @@
 /* ============================================================
  * embed.js — Memuat Web App Apps Script di dalam iframe (domain Vercel).
  *
- * Iframe dipasang langsung penuh (top:0, 100% width/height) sehingga
- * panel header menempel pada frame tanpa celah.
+ * GAS menyisipkan strip abu-abu kosong (`#warning.warning-bar`) di atas
+ * konten web app (baris pertama tabel wrapper Google). Iframe digeser naik
+ * setinggi strip itu dan dipertinggi sama besar, sehingga strip keluar dari
+ * area tampil dan panel header langsung menempel pada frame tanpa celah.
+ * Atur GAS_PANEL_PX = 0 untuk menonaktifkan penggeseran.
  *
  * Cara pakai (semua halaman):
  *   <script src="js/config.js"></script>
@@ -54,20 +57,28 @@
     var src = buildSrc();
     var loading = document.getElementById('loading');
 
+    // Tinggi strip GAS (#warning.warning-bar) yang digeser keluar (px).
+    // 0 = nonaktif. Default 25 (strip tipis, bukan banner berteks ~44px).
+    var band = parseInt(CONFIG.GAS_PANEL_PX, 10);
+    if (isNaN(band) || band < 0) band = 25;
+
     // Bersihkan root
     root.innerHTML = '';
 
     var stage = document.createElement('div');
     stage.id = 'stage';
-    stage.style.cssText = 'position:absolute;inset:0;';
+    stage.style.cssText = 'position:absolute;inset:0;overflow:hidden;';
 
+    // Iframe digeser naik setinggi strip & dipertinggi sama besar —
+    // strip keluar dari area tampil, panel header menempel ke frame.
     var frame = document.createElement('iframe');
     frame.id = 'appFrame';
     frame.setAttribute('src', src);
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
     frame.style.cssText =
-      'position:absolute;left:0;top:0;width:100%;height:100%;' +
+      'position:absolute;left:0;top:-' + band + 'px;' +
+      'width:100%;height:calc(100% + ' + band + 'px);' +
       'margin:0;padding:0;border:none;display:block;' +
       '-webkit-overflow-scrolling:touch;';
 
