@@ -13,9 +13,9 @@ window.AIRNAV_CONFIG = {
   /*
    * GAS_PANEL_PX — tinggi strip abu-abu yang disisipkan GAS di atas konten
    * (`#warning.warning-bar`). Iframe digeser naik sebesar nilai ini agar strip
-   * tidak terlihat & panel header menempel pada frame. Default 30. 0 = nonaktif.
+   * tidak terlihat & panel header menempel pada frame. Default 27. 0 = nonaktif.
    */
-  GAS_PANEL_PX: 30,
+  GAS_PANEL_PX: 27,
 
   // Label situs / nama aplikasi (dipakai judul & fallback loading)
   APP_NAME: 'AirNav Billing',
