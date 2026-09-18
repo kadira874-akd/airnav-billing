@@ -24,7 +24,7 @@ vercel-front/
 Buka `js/config.js` lalu sesuaikan:
 
 - `APPSCRIPT_URL` — URL `/exec` Web App Apps Script Anda (dari deployment).
-- `GAS_PANEL_PX` — tinggi strip GAS di atas konten (px). Default `25`.
+- `GAS_PANEL_PX` — tinggi strip GAS di atas konten (px). Default `30`.
   - Strip masih tampak → tambah nilainya (mis. 28, 32).
   - Header atas terpotong   → kurangi nilainya (mis. 20, 16).
   - `0` = nonaktif, pasang iframe penuh tanpa penggeseran.
