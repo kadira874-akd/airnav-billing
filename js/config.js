@@ -11,9 +11,12 @@ window.AIRNAV_CONFIG = {
   APPSCRIPT_QUERY: '?',
 
   /*
-   * NOTE: iframe dipasang UTUH penuh (top:0) — panel header menempel
-   * langsung pada frame tanpa celah.
+   * GAS_PANEL_PX — tinggi strip kosong (px) yang disisipkan Google Apps
+   * Script di atas konten web app. Iframe digeser naik setinggi nilai ini
+   * agar strip tidak terlihat & panel header menempel pada frame.
+   * Default 44. Set 0 jika GAS tidak lagi menyisipkan strip.
    */
+  GAS_PANEL_PX: 44,
 
   // Label situs / nama aplikasi (dipakai judul & fallback loading)
   APP_NAME: 'AirNav Billing',

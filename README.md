@@ -1,9 +1,8 @@
 # AirNav Billing — Front-end (Vercel)
 
 Halaman pembungkus ringkas untuk memuat Web App **Google Apps Script** di dalam
-iframe secara **utuh penuh** (tanpa pemotongan frame). Hasil: URL pendek
-(bukan `script.google.com`) dan panel header langsung menempel pada frame
-tanpa celah.
+iframe. Strip kosong yang disisipkan GAS di atas konten di-overscan keluar dari
+area tampil, sehingga panel header langsung menempel pada frame tanpa celah.
 
 ## Struktur
 
@@ -14,8 +13,8 @@ vercel-front/
 ├─ batch.html         # Portal tagihan   → iframe ?batch=1&bid=..&t=..
 ├─ doc.html           # Download dokumen → iframe ?doc=1&rid=..&t=..
 ├─ js/
-│  ├─ config.js       # ★ SATU file yang perlu diedit (URL exec)
-│  └─ embed.js        # Memuat Apps Script utuh penuh dalam iframe
+│  ├─ config.js       # ★ SATU file yang perlu diedit (URL exec + GAS_PANEL_PX)
+│  └─ embed.js        # Memuat Apps Script dalam iframe (overscan strip GAS)
 └─ css/
    └─ base.css        # Gaya dark full-screen + loading
 ```
@@ -25,6 +24,9 @@ vercel-front/
 Buka `js/config.js` lalu sesuaikan:
 
 - `APPSCRIPT_URL` — URL `/exec` Web App Apps Script Anda (dari deployment).
+- `GAS_PANEL_PX` — tinggi strip GAS di atas konten (px). Default `44`.
+  - Strip masih tampak → tambah nilainya (mis. 48, 52).
+  - Konten bawah terpotong   → kurangi nilainya (mis. 40, 36).
 - `APP_NAME` — judul situs.
 
 > `PUBLIC_BASE_URL` di sisi **Apps Script** (`code.gs`) harus sama dengan domain
