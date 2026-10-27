@@ -75,8 +75,8 @@
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
     frame.style.cssText =
-      'position:absolute;left:0;top:0;' +                // <-- POSISI PRESISI DI ATAS
-      'width:100%;height:100%;' +                        // <-- TINGGI NORMAL 100%
+      'position:absolute;left:0;top:-27px;' +            // <-- TARIK KE ATAS UNTUK SEMBUNYIKAN BAR ABU
+      'width:100%;height:calc(100% + 27px);' +           // <-- TAMBAH TINGGI AGAR SEIMBANG
       'margin:0;padding:0;border:none;display:block;' +
       '-webkit-overflow-scrolling:touch;';
 
