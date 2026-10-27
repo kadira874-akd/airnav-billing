@@ -74,10 +74,9 @@
     frame.setAttribute('src', src);
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
-    // Menarik iframe ke atas sejauh 27px untuk menyembunyikan bar Google
     frame.style.cssText =
-      'position:absolute;left:0;top:-27px;' + 
-      'width:100%;height:calc(100% + 27px);' + 
+      'position:absolute;left:0;top:0;' + // KUNCI: Harus top 0
+      'width:100%;height:100%;' +         // KUNCI: Harus height 100% (bukan calc)
       'margin:0;padding:0;border:none;display:block;' +
       '-webkit-overflow-scrolling:touch;';
 
