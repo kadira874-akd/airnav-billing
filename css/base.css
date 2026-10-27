@@ -2,13 +2,14 @@
  * base.css — style halaman pembungkus (dark, full-screen)
  * ============================================================ */
 html, body {
-  margin: 0; padding: 0; height: 100%; width: 100%;
-  overflow: hidden;
+  margin: 0; padding: 0; 
+  height: 100%; width: 100%;
+  overflow: hidden; /* Penting: agar tidak muncul scrollbar */
   background: #05101e;
-  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 #wrap {
-  position: fixed; inset: 0;
+  position: absolute; /* Ubah dari fixed ke absolute */
+  inset: 0;
 }
 #loading {
   position: fixed; inset: 0;
