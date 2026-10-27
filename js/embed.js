@@ -57,58 +57,25 @@
     var src = buildSrc();
     var loading = document.getElementById('loading');
 
-    // Tinggi strip GAS (#warning.warning-bar) yang digeser keluar (px).
-    // 0 = nonaktif. Default 25 (strip tipis, bukan banner berteks ~44px).
-    var band = parseInt(CONFIG.GAS_PANEL_PX, 10);
-    if (isNaN(band) || band < 0) band = 0;
-
-    // Bersihkan root
-    root.innerHTML = '';
-
-    var stage = document.createElement('div');
-    stage.id = 'stage';
-    stage.style.cssText = 'position:absolute;inset:0;overflow:hidden;';
+    root.innerHTML = ''; // Bersihkan
 
     var frame = document.createElement('iframe');
     frame.id = 'appFrame';
     frame.setAttribute('src', src);
     frame.setAttribute('allow', 'clipboard-write');
     frame.setAttribute('referrerpolicy', 'no-referrer');
-    frame.style.cssText =
-      'position:absolute;left:0;top:0;' + // KUNCI: Harus top 0
-      'width:100%;height:100%;' +         // KUNCI: Harus height 100% (bukan calc)
-      'margin:0;padding:0;border:none;display:block;' +
-      '-webkit-overflow-scrolling:touch;';
+    
+    // PENGATURAN CSS PALING MURNI (Tanpa margin/offset)
+    frame.style.cssText = 
+      'position:absolute;top:0;left:0;width:100%;height:100%;' +
+      'border:none;display:block;';
 
-    var loaded = false;
-
+    // Event listener tetap ada untuk menangani loading
     frame.addEventListener('load', function () {
-      loaded = true;
       if (loading) loading.style.display = 'none';
     });
 
-    // Timeout: jika iframe tidak selesai load dalam 20 detik,
-    // tampilkan pesan error di layar (mengganti loading).
-    setTimeout(function () {
-      if (loaded) return;
-      if (!loading) return;
-      loading.style.display = 'flex';
-      loading.innerHTML =
-        '<div style="color:#f43f5e;text-align:center;padding:2rem;max-width:420px">' +
-          '<div style="font-size:1.5rem;margin-bottom:1rem">&#9888;</div>' +
-          '<div style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Tidak Dapat Memuat Tagihan</div>' +
-          '<div style="font-size:.8rem;color:#94a3b8;line-height:1.6;text-align:left">' +
-            'Server aplikasi tidak merespons. Kemungkinan penyebab:<br><br>' +
-            '&#8226; Web App Apps Script belum di-deploy ke versi terbaru<br>' +
-            '&#8226; URL endpoint tidak sesuai<br>' +
-            '&#8226; Izin akses web app belum "Anyone"<br><br>' +
-            'Hubungi admin AirNav untuk bantuan.' +
-          '</div>' +
-        '</div>';
-    }, 20000);
-
-    stage.appendChild(frame);
-    root.appendChild(stage);
+    root.appendChild(frame);
   }
 
   if (document.readyState === 'loading') {
