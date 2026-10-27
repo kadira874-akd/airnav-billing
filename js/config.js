@@ -15,7 +15,7 @@ window.AIRNAV_CONFIG = {
    * (`#warning.warning-bar`). Iframe digeser naik sebesar nilai ini agar strip
    * tidak terlihat & panel header menempel pada frame. Default 27. 0 = nonaktif.
    */
-  GAS_PANEL_PX: 27,
+  GAS_PANEL_PX: 0,
 
   // Label situs / nama aplikasi (dipakai judul & fallback loading)
   APP_NAME: 'AirNav Billing',
