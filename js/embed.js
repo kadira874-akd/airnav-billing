@@ -58,7 +58,7 @@
     
     var frame = document.createElement('iframe');
     frame.src = buildSrc();
-    frame.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
+    frame.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;display:block;';
   
     // Loading hanya hilang jika iframe benar-benar sukses loading
     frame.onload = function() {
