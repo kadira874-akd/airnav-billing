@@ -50,31 +50,28 @@
     return base + (query ? sep + query.replace(/^[?&]/, '') : '');
   }
 
+  // GANTI BAGIAN mount() DI embed.js
   function mount() {
     var root = document.getElementById('wrap');
-    if (!root) return;
-
-    var src = buildSrc();
     var loading = document.getElementById('loading');
-
-    root.innerHTML = ''; // Bersihkan
-
-    var frame = document.createElement('iframe');
-    frame.id = 'appFrame';
-    frame.setAttribute('src', src);
-    frame.setAttribute('allow', 'clipboard-write');
-    frame.setAttribute('referrerpolicy', 'no-referrer');
+    root.innerHTML = '';
     
-    // PENGATURAN CSS PALING MURNI (Tanpa margin/offset)
-    frame.style.cssText = 
-      'position:absolute;top:0;left:0;width:100%;height:100%;' +
-      'border:none;display:block;';
-
-    // Event listener tetap ada untuk menangani loading
-    frame.addEventListener('load', function () {
+    var frame = document.createElement('iframe');
+    frame.src = buildSrc();
+    frame.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
+  
+    // Loading hanya hilang jika iframe benar-benar sukses loading
+    frame.onload = function() {
       if (loading) loading.style.display = 'none';
-    });
-
+    };
+    
+    // Timeout jika gagal total
+    setTimeout(function() {
+      if (loading && loading.style.display !== 'none') {
+        loading.innerHTML = '<div style="color:red">Aplikasi gagal dimuat. Coba refresh.</div>';
+      }
+    }, 20000);
+  
     root.appendChild(frame);
   }
 
