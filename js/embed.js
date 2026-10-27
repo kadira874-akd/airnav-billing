@@ -53,7 +53,7 @@
   // Tinggi strip "warning bar" yang disisipkan Google di baris pertama
   // tabel wrapper (<table id="warning-bar-table">) sebelum iframe konten.
   // Nilai ini TIDAK dijamin konstan oleh Google — set ke 0 untuk menonaktifkan.
-  var GAS_PANEL_PX = 18;
+  var GAS_PANEL_PX = 15;
 
   function mount() {
     var root = document.getElementById('wrap');
